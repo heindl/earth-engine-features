@@ -1,8 +1,14 @@
 node_modules
 build
 test
+.env
 src/**.js
 .idea/*
+*.iml
+.DS_Store
+
+# CONFIG
+.env
 
 coverage
 .nyc_output

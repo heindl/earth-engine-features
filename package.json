@@ -1,11 +1,12 @@
 {
-  "name": "floracast-earth-engine",
-  "version": "1.0.0",
-  "description": "A Google Cloud Function for fetching machine learning features from Google Earth Engine.",
+  "name": "earth-engine-features",
+  "version": "0.1.0",
+  "description": "Google Cloud Function to generate machine learning features from Google Earth Engine.",
   "main": "build/main/index.js",
+  "author": "Parker Heindl",
   "typings": "build/main/index.d.ts",
   "module": "build/module/index.js",
-  "repository": "https://github.com/heindl/floracast-earth-engine",
+  "repository": "https://github.com/heindl/earth-engine-features",
   "license": "MIT",
   "keywords": [],
   "scripts": {
@@ -51,9 +52,13 @@
     "node": ">=8.9"
   },
   "dependencies": {
+    "@google/earthengine": "^0.1.152",
+    "dotenv": "^6.1.0",
+    "dts-gen": "^0.5.7",
     "sha.js": "^2.4.11"
   },
   "devDependencies": {
+    "@types/dotenv": "^4.0.3",
     "ava": "1.0.0-beta.7",
     "codecov": "^3.1.0",
     "cz-conventional-changelog": "^2.1.0",
