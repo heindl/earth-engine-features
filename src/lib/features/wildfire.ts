@@ -1,48 +1,50 @@
 import ee from '@google/earthengine';
 
+export function fetch(feature: ee.Feature): Promise<object> {
+  const date = ee.Date(feature.get('time_start'));
 
-export const fetch = (f: ee.Feature): Promise<object> => {
-  const date = ee.Date(f.get(ee.String('time_start')));
+  const FIRMS = ee.ImageCollection('FIRMS');
 
-  const FIRMS = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET");
+  const imgs = FIRMS.filterDate(
+    date.advance(ee.Number(-6.5), ee.String('year')),
+    date
+  ).select(ee.String('T21'));
 
-  const imgs = FIRMS
-    .filterDate(
-      date.advance(ee.Number(-6.5), ee.String('year')),
-      date
-    )
-    .select('T21');
+  const regions = imgs.getRegion(feature.geometry(), ee.Number(1000));
 
-  const regions = imgs.getRegion(f.geometry(), ee.Number(1000));
-
-  const filteredRegions = ee.List(regions)
+  const filteredRegions = ee
+    .List(regions)
     .slice(1)
-    .map((r) => {
-      return ee.Algorithms.If(r.get(4), r.get(3), ee.Number(0));
+    .map(r => {
+      const list = ee.List(r);
+      return ee.Algorithms.If(list.get(4), list.get(3), ee.Number(0));
     })
-    .removeAll(ee.List([ee.Number(0)]))
+    .removeAll([ee.Number(0)])
     .sort();
 
-  const res = f.set(ee.List([
-    ee.String('fire_days_since'),
-    ee.Algorithms.If(
-      filteredRegions.length(),
-      ee.Date(date).difference(ee.Date(filteredRegions.get(0)), ee.String('day')),
-      ee.Number(-1)
-    )
-  ]));
+  const res = feature.set(
+    ee.List([
+      ee.String('fire_days_since'),
+      ee.Algorithms.If(
+        filteredRegions.length(),
+        ee
+          .Date(date)
+          .difference(ee.Date(filteredRegions.get(0)), ee.String('day')),
+        ee.Number(-1)
+      )
+    ])
+  );
 
   return new Promise((resolve, reject) => {
     res.evaluate((data, err) => {
-        if (err) {
-            reject(err);
-            return
-        }
-        resolve(data)
-    })
-  })
-
-};
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(data);
+    });
+  });
+}
 
 // export const fireRegions = (features: ee.FeatureCollection, startDate: ee.Date, endDate: ee.Date): ee.List<ee.Feature> => {
 //
@@ -148,4 +150,3 @@ export const fetch = (f: ee.Feature): Promise<object> => {
 //         }))
 //     })
 // }
-

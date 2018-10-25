@@ -1,7 +1,7 @@
 {
   "name": "earth-engine-features",
   "version": "0.1.0",
-  "description": "Google Cloud Function to generate machine learning features from Google Earth Engine.",
+  "description": "Cloud Function to generate machine learning features from Google Earth Engine.",
   "main": "build/main/index.js",
   "author": "Parker Heindl",
   "typings": "build/main/index.d.ts",
