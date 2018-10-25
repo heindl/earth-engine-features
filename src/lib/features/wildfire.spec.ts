@@ -1,9 +1,7 @@
 import ee from '@google/earthengine';
 import test from 'ava';
-import * as dotenv from 'dotenv';
 import { initialize } from './initialize';
 import { fetch } from './wildfire';
-dotenv.config();
 
 test.skip('get fire data', async t => {
   await initialize();

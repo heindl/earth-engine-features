@@ -10,7 +10,7 @@ export function fetch(feature: ee.Feature): Promise<object> {
     date
   ).select(ee.String('T21'));
 
-  const regions = imgs.getRegion(feature.geometry(), ee.Number(1000));
+  const regions = imgs.getRegion({geometry: feature.geometry(), scale: 1000});
 
   const filteredRegions = ee
     .List(regions)

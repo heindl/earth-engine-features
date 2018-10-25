@@ -2,16 +2,20 @@
 
 declare module '@google/earthengine' {
   namespace ee {
+    export function call(s: string): Object;
+
     export interface Object {
       evaluate(callback: (success: object, failure: Error) => void): void;
     }
 
     export type UncastFeatureCollection = Object;
+    export type UncastImageCollection = Object;
     export type UncastDictionary = Object;
     export type UncastString = Object;
     export type UncastNumber = Object;
     export type UncastFeature = Object;
     export type UncastList = Object;
+    export type UncastGeometry = Object;
 
     export interface String extends Object {
       length(): Number;
@@ -76,6 +80,10 @@ declare module '@google/earthengine' {
     interface DictionaryConstructor {
       <T>(data: { [key: string]: T }): Dictionary;
       (data: Object): Dictionary;
+      fromLists(
+        key: Object | string[] | String[],
+        values: Object | Object[]
+      ): Dictionary;
     }
 
     export const Dictionary: DictionaryConstructor;
@@ -94,13 +102,14 @@ declare module '@google/earthengine' {
       ): Geometry;
     }
     interface GeometryConstructor {
-      Point(coords: [number, number]): Geometry;
-      Rectangle(
-        coords: List | number[],
-        proj?: Projection,
-        geodesic?: boolean,
-        evenOdd?: boolean
-      ): Geometry;
+      (obj: Object): Geometry;
+      Point(coords: [number | Number, number | Number]): Geometry;
+      Rectangle(params: {
+        coords: List | number[];
+        proj?: Projection;
+        geodesic?: boolean;
+        evenOdd?: boolean;
+      }): Geometry;
     }
     export const Geometry: GeometryConstructor;
 
@@ -108,6 +117,7 @@ declare module '@google/earthengine' {
       id(): string;
       map(func: (a: Object) => Object): List;
       slice(start: number, end?: number): List;
+      set(position: number, value: string | number | Object): List;
       get(index: number): Object;
       removeAll(other: Object[]): List;
       sort(): List;
@@ -116,10 +126,12 @@ declare module '@google/earthengine' {
         fn: (current: Object, previous: Object) => void,
         first?: Object
       ): Object;
-      cat(list: Object[] | Object): List;
+      cat(list: Object[] | Object | string[]): List;
       flatten(): List;
     }
-    export const List: (values: Object[] | Object | number[]) => List;
+    export const List: (
+      values: Object[] | Object | number[] | string[]
+    ) => List;
 
     export interface Feature extends Object {
       id(): String;
@@ -144,6 +156,7 @@ declare module '@google/earthengine' {
     interface ReducerConstructor {
       max(): Reducer;
       sum(): Reducer;
+      first(): Reducer;
     }
     export const Reducer: ReducerConstructor;
 
@@ -177,18 +190,18 @@ declare module '@google/earthengine' {
       updateMask(mask: Image): Image;
       mask(mask?: Image): Image;
       rename(bands: string[]): Image;
-      addBands(img: Image): Image;
-      reduceRegion(
-        reducer: Reducer,
-        geometry?: Geometry,
-        scale?: Number,
-        crs?: Projection,
-        crsTransform?: List,
-        bestEffort?: boolean,
-        maxPixels?: number,
-        tileScale?: number
-      ): Dictionary;
-      select(...bands: string[]): Image;
+      addBands(img: Image, selected?: string[]): Image;
+      reduceRegion(params: {
+        reducer: Reducer | Object;
+        geometry?: Geometry;
+        scale?: Number | number;
+        crs?: Projection;
+        crsTransform?: List;
+        bestEffort?: boolean;
+        maxPixels?: number;
+        tileScale?: number;
+      }): Dictionary;
+      select(bands: string[] | string): Image;
       eq(obj: Image | String | Number): Image;
       fastDistanceTransform(
         // Neighborhood size in pixels, default 256
@@ -200,14 +213,16 @@ declare module '@google/earthengine' {
       ): Image;
       sqrt(): Image;
       multiply(img?: Image): Image;
-      reduceRegions(
-        collection: FeatureCollection, // The features to reduce over.
-        reducer: Reducer, // The reducer to apply.
-        scale?: number | Number, // A nominal scale in meters of the projection to work in.
-        crs?: Projection, // The projection to work in. If unspecified, the projection of the image's first band is used. If specified in addition to scale, rescaled to the specified scale.
-        crsTransform?: List, // The list of CRS transform values. This is a row-major ordering of the 3x2 transform matrix. This option is mutually exclusive with 'scale', and will replace any transform already set on the projection.
-        tileScale?: number | Number // A scaling factor used to reduce aggregation tile size; using a larger tileScale (e.g. 2 or 4) may enable computations that run out of memory with the default.
-      ): FeatureCollection;
+      get(s: string): Object;
+      clip(geometry: Feature | Geometry | Object): Image;
+      reduceRegions(params: {
+        collection: FeatureCollection; // The features to reduce over.
+        reducer: Reducer | Object; // The reducer to apply.
+        scale?: number | Number; // A nominal scale in meters of the projection to work in.
+        crs?: Projection; // The projection to work in. If unspecified, the projection of the image's first band is used. If specified in addition to scale, rescaled to the specified scale.
+        crsTransform?: List; // The list of CRS transform values. This is a row-major ordering of the 3x2 transform matrix. This option is mutually exclusive with 'scale', and will replace any transform already set on the projection.
+        tileScale?: number | Number; // A scaling factor used to reduce aggregation tile size; using a larger tileScale (e.g. 2 or 4) may enable computations that run out of memory with the default.
+      }): FeatureCollection;
     }
     interface ImageConstructor {
       (v: string | Image): Image;
@@ -217,10 +232,12 @@ declare module '@google/earthengine' {
 
     export interface ImageCollection extends Object {
       filterBounds(geometry: Feature | Geometry): ImageCollection;
+      sort(s: string | String): ImageCollection;
 
       filter(filter: ee.Filter): ImageCollection;
 
       first(): Image;
+      get(v: string): Object;
 
       filterDate(
         start: Date | number | string,
@@ -229,8 +246,8 @@ declare module '@google/earthengine' {
 
       // A list of names, regexes or numeric indices specifying the bands to select.
       select(
-        selectors: List | String,
-        names?: ReadonlyArray<string>
+        selectors: List | String | string[] | Object,
+        names?: string[] | Object[] | List
       ): ImageCollection;
 
       reduceColumns(
@@ -239,31 +256,33 @@ declare module '@google/earthengine' {
         weightSelectors?: List
       ): List;
 
-      getRegion(
-        geometry: Geometry,
-        scale?: Number,
-        crs?: Projection,
-        crsTransform?: List
-      ): List;
+      toArrayPerBand(axis: number | Number): Image;
+
+      getRegion(obj: {
+        geometry: Geometry;
+        scale?: Number | number;
+        crs?: Projection;
+        crsTransform?: List;
+      }): List;
     }
 
     export const ImageCollection: (
-      v: Image | ReadonlyArray<Image> | string
+      v: Image | Image[] | string | Object
     ) => ImageCollection;
 
     export interface FeatureCollection extends Object {
       geometry(): Geometry;
       toList(count: Number, offset?: number): List;
       size(): Number;
+      get(key: string): Object;
       sort(s: string): FeatureCollection;
       filter(filter: Filter): FeatureCollection;
       aggregate_min(property: String): Number;
       map(func: (a: Feature) => Feature): FeatureCollection;
-      aggregate_array(property: string): Object;
+      aggregate_array(property: string | String): Object;
       first(): Feature;
       aggregate_first(property: string): Object;
       merge(collection: ee.FeatureCollection): ee.FeatureCollection;
-      get(v: string): Object;
       iterate(
         fn: (current: Feature, previous: FeatureCollection) => void,
         first: Object
@@ -276,7 +295,7 @@ declare module '@google/earthengine' {
 
     export interface Date extends Object {
       readonly format: (format?: string, timeZone?: string) => string;
-      advance(amount: Number, unit: String): Date;
+      advance(amount: Number | number, unit: String | string): Date;
       difference(start: Date, unit: String): Number;
       get(v: string): Object;
       update(o: {
@@ -309,6 +328,21 @@ declare module '@google/earthengine' {
       }): Filter;
     }
     export const Filter: FilterConstructor;
+
+    namespace Terrain {
+      export function products(image: Image): Image;
+    }
+
+    // export interface DateRange extends Object {
+    //   contains(other: Object): Boolean;
+    //   start(): Date;
+    //   end(): Date;
+    // }
+    // interface DateRangeConstructor {
+    //   (start: Date, end: Date): DateRange;
+    //   (obj: Object): DateRange;
+    // }
+    // export const DateRange: DateRangeConstructor;
   }
 
   export = ee;

@@ -1,19 +1,17 @@
 import ee, { UncastFeatureCollection } from '@google/earthengine';
 
 const getImage = (date: ee.Date, ufc: ee.UncastFeatureCollection): ee.Image => {
-  // tslint:disable:variable-name
-  const JRC_GSW1_0_MonthlyHistory = ee.ImageCollection(
-    'JRC/GSW1_0/MonthlyHistory'
-  );
+  const ic = ee.ImageCollection('JRC/GSW1_0/MonthlyHistory');
 
   const fc = ee.FeatureCollection(ufc);
 
-  const waterImage = JRC_GSW1_0_MonthlyHistory.filter(
-    ee.Filter.and(
-      ee.Filter.eq(ee.String('month'), date.get('month')),
-      ee.Filter.eq(ee.String('year'), date.get('year'))
+  const waterImage = ic
+    .filter(
+      ee.Filter.and(
+        ee.Filter.eq(ee.String('month'), date.get('month')),
+        ee.Filter.eq(ee.String('year'), date.get('year'))
+      )
     )
-  )
     .first()
     .clipToCollection(fc);
 
@@ -89,11 +87,11 @@ const fetchBatch = (
 
   const img = getImage(imageDate, regionFc);
 
-  const regions = img.reduceRegions(
-    ee.FeatureCollection(regionFc),
-    ee.Reducer.sum(),
-    30
-  );
+  const regions = img.reduceRegions({
+    collection: ee.FeatureCollection(regionFc),
+    reducer: ee.call('Reducer.sum'),
+    scale: 30
+  });
 
   const combined = ee.Join.saveAll({ matchesKey: 'joined' }).apply(
     ee.FeatureCollection(fc),
