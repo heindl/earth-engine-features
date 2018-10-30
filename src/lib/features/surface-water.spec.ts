@@ -1,6 +1,6 @@
 import ee from '@google/earthengine';
 import test from 'ava';
-import { initialize } from './initialize';
+import { initialize } from '../utils/initialize';
 import { fetch } from './surface-water';
 
 test.skip('check surface water', async t => {

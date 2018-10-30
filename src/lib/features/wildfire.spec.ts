@@ -1,6 +1,6 @@
 import ee from '@google/earthengine';
 import test from 'ava';
-import { initialize } from './initialize';
+import { initialize } from '../utils/initialize';
 import { fetch } from './wildfire';
 
 test.skip('get fire data', async t => {

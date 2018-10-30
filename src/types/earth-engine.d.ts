@@ -2,7 +2,7 @@
 
 declare module '@google/earthengine' {
   namespace ee {
-    export function call(s: string): Object;
+    export function call(s: string): Reducer;
 
     export interface Object {
       evaluate(callback: (success: object, failure: Error) => void): void;
@@ -64,8 +64,10 @@ declare module '@google/earthengine' {
     }
 
     export interface Number extends Object {
-      add(v: number): Number;
-      multiply(v: number): Number;
+      add(v: number | Number): Number;
+      multiply(v: number | Number): Number;
+      divide(v: number | Number): Number;
+      round(): Number;
     }
     export const Number: (v: number | Object) => Number;
 
@@ -78,8 +80,9 @@ declare module '@google/earthengine' {
       set(key: string | String, value: Object): Dictionary;
     }
     interface DictionaryConstructor {
-      <T>(data: { [key: string]: T }): Dictionary;
-      (data: Object): Dictionary;
+      (
+        data: { [key: string]: Object | string | string | null } | Object
+      ): Dictionary;
       fromLists(
         key: Object | string[] | String[],
         values: Object | Object[]
@@ -90,6 +93,7 @@ declare module '@google/earthengine' {
 
     export interface Geometry extends Object {
       geodesic(): boolean;
+      intersection(right: Geometry, maxError?: number): Geometry;
       buffer(
         // The distance of the buffering, which may be negative.
         // If no projection is specified, the unit is meters.
@@ -120,6 +124,7 @@ declare module '@google/earthengine' {
       set(position: number, value: string | number | Object): List;
       get(index: number): Object;
       removeAll(other: Object[]): List;
+      reduce(reducer: Reducer): Object;
       sort(): List;
       length(): Number;
       iterate(
@@ -137,21 +142,20 @@ declare module '@google/earthengine' {
       id(): String;
       // Extract a property from a feature.
       get(s: String | string): Object;
+      setGeometry(geometry: Geometry): Object;
       geometry(
         maxError?: Number,
         proj?: Projection,
         geodesics?: List
       ): Geometry;
       set(var_args: Dictionary | ee.List): Feature;
-      setMulti(props: Dictionary): Feature;
+      setMulti(props: Dictionary | {}): Feature;
     }
-    export const Feature: (
-      v: Geometry | Feature | Object,
-      props?: Dictionary | Object | object
-    ) => Feature;
+    export const Feature: (v: Object, props?: Object | object) => Feature;
 
-    export interface Reducer {
+    export interface Reducer extends Object {
       unweighted(): Reducer;
+      group(params: { groupField: number; groupName: string }): Object;
     }
     interface ReducerConstructor {
       max(): Reducer;
@@ -191,6 +195,21 @@ declare module '@google/earthengine' {
       mask(mask?: Image): Image;
       rename(bands: string[]): Image;
       addBands(img: Image, selected?: string[]): Image;
+
+      stratifiedSample(params: {
+        numPoints: Number | number; // The default number of points to sample in each class. Can be overridden for specific classes using the 'classValues' and 'classPoints' properties.
+        classBand?: String | string; // The name of the band containing the classes to use for stratification. If unspecified, the first band of the input image is used.
+        region?: Geometry; // The region to sample from. If unspecified, the input image's whole footprint is used.
+        scale?: Number | number; // A nominal scale in meters of the projection to sample in. Defaults to the scale of the first band of the input image.
+        projection?: Projection; // The projection in which to sample. If unspecified, the projection of the input image's first band is used. If specified in addition to scale, rescaled to the specified scale.
+        seed?: Number; // A randomization seed to use for subsampling.
+        classValues?: List; // A list of class values for which to override the numPixels parameter. Must be the same size as classPoints or null.
+        classPoints?: List; // A list of the per-class maximum number of pixels to sample for each class in the classValues list. Must be the same size as classValues or null.
+        dropNulls?: Boolean | boolean; // Skip pixels in which any band is masked.
+        tileScale?: Number; // A scaling factor used to reduce aggregation tile size; using a larger tileScale (e.g. 2 or 4) may enable computations that run out of memory with the default.
+        geometries?: Boolean | boolean; // If true, the results will include a geometry per sampled pixel. Otherwise, geometries will be omitted (saving memory).
+      }): FeatureCollection;
+
       reduceRegion(params: {
         reducer: Reducer | Object;
         geometry?: Geometry;
@@ -214,6 +233,13 @@ declare module '@google/earthengine' {
       sqrt(): Image;
       multiply(img?: Image): Image;
       get(s: string): Object;
+      // Casts the input value to an unsigned 8-bit integer.
+      byte(): Image;
+      paint(
+        featureCollection: FeatureCollection,
+        color?: Object | string,
+        width?: Object
+      ): Image;
       clip(geometry: Feature | Geometry | Object): Image;
       reduceRegions(params: {
         collection: FeatureCollection; // The features to reduce over.
@@ -225,8 +251,9 @@ declare module '@google/earthengine' {
       }): FeatureCollection;
     }
     interface ImageConstructor {
-      (v: string | Image): Image;
+      (v?: string | Image): Image;
       pixelArea(): Image;
+      pixelLonLat(): Image;
     }
     export const Image: ImageConstructor;
 
@@ -271,8 +298,12 @@ declare module '@google/earthengine' {
     ) => ImageCollection;
 
     export interface FeatureCollection extends Object {
-      geometry(): Geometry;
+      geometry(scale?: number): Geometry;
       toList(count: Number, offset?: number): List;
+      randomColumn(
+        columnName: string,
+        seed?: number | Number
+      ): FeatureCollection;
       size(): Number;
       get(key: string): Object;
       sort(s: string): FeatureCollection;
@@ -289,7 +320,7 @@ declare module '@google/earthengine' {
       ): Object;
     }
     type FeatureCollectionConstructor = (
-      v: Object[] | List | Object
+      v: Object[] | List | Object | string
     ) => FeatureCollection;
     export const FeatureCollection: FeatureCollectionConstructor;
 
@@ -306,6 +337,7 @@ declare module '@google/earthengine' {
         minute?: number | Number;
         second?: number | Number;
       }): Date;
+      millis(): Number;
     }
     interface DateConstructor {
       (date: Object): Date;
@@ -318,7 +350,8 @@ declare module '@google/earthengine' {
     }
     interface FilterConstructor {
       notNull(properties: ReadonlyArray<string>): Filter;
-      eq(name: String, value: Object): Filter;
+      eq(name: String | string, value: Object | string): Filter;
+      or(...filters: Filter[]): Filter;
       and(...filters: Filter[]): Filter;
       equals(obj: {
         leftField?: string | String; // A selector for the left operand. Should not be specified if leftValue is specified.

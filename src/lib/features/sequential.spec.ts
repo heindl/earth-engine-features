@@ -1,9 +1,9 @@
 import ee from '@google/earthengine';
 import test from 'ava';
-import { initialize } from './initialize';
+import { initialize } from '../utils/initialize';
 import fetch from './sequential';
 
-test('check sequential', async t => {
+test.skip('check sequential', async t => {
   await initialize();
 
   const gj: GeoJSON.FeatureCollection = await fetch(
@@ -17,16 +17,15 @@ test('check sequential', async t => {
     )
   );
 
-  gj.features.forEach((feature) => {
-
+  gj.features.forEach(feature => {
     const props = feature.properties || {};
 
     const keys = Object.keys(props);
 
-    keys.forEach((k) => {
+    keys.forEach(k => {
       // tslint:disable:no-console
-      console.log(k)
-    })
+      console.log(k);
+    });
   });
 
   t.is(true, false);

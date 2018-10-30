@@ -1,6 +1,6 @@
 import ee from '@google/earthengine';
 import test from 'ava';
-import { initialize } from './initialize';
+import { initialize } from '../utils/initialize';
 import fetch from './nonsequential';
 
 test.skip('check nonsequential', async t => {
