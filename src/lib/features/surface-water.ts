@@ -1,4 +1,4 @@
-import ee, { UncastFeatureCollection } from '@google/earthengine';
+import ee from '@google/earthengine';
 
 const getImage = (date: ee.Date, ufc: ee.UncastFeatureCollection): ee.Image => {
   const ic = ee.ImageCollection('JRC/GSW1_0/MonthlyHistory');
@@ -93,11 +93,14 @@ const fetchBatch = (
     scale: 30
   });
 
-  const combined = ee.Join.saveAll({ matchesKey: 'joined' }).apply(
-    ee.FeatureCollection(fc),
-    regions,
-    ee.Filter.equals({ leftField: 'system:index', rightField: 'feature_id' })
-  );
+  const combined = ee.Join.saveAll({ matchesKey: 'joined' }).apply({
+    condition: ee.Filter.equals({
+      leftField: 'system:index',
+      rightField: 'feature_id'
+    }),
+    primary: ee.FeatureCollection(fc),
+    secondary: regions
+  });
 
   return combined.map(aggregateAreaStats);
 };
@@ -107,7 +110,7 @@ const compileBatches = (
   r: ee.UncastDictionary
 ): ee.Dictionary => {
   const feature = ee.Feature(f);
-  const startDate = ee.Date(feature.get('time_start'));
+  const startDate = ee.Date(feature.get('system:time_start'));
   const res = ee.Dictionary(r);
 
   const latestYear = ee
@@ -134,37 +137,28 @@ const compileBatches = (
   );
 };
 
-export const fetch = (fc: ee.UncastFeatureCollection): Promise<object> => {
-  return new Promise((resolve, reject) => {
-    const res = ee
-      .Dictionary(
-        ee.FeatureCollection(fc).iterate(compileBatches, ee.Dictionary({}))
-      )
-      .map(fetchBatch)
-      .values()
-      .iterate(
-        (ifc: UncastFeatureCollection, resFc: UncastFeatureCollection) => {
-          return ee.FeatureCollection(resFc).merge(ee.FeatureCollection(ifc));
-        },
-        ee.FeatureCollection([])
-      );
-
-    return res.evaluate((data, err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(data);
-    });
-  });
-};
+export default function(fc: ee.FeatureCollection): ee.FeatureCollection {
+  const data = ee
+    .Dictionary(
+      ee.FeatureCollection(fc).iterate(compileBatches, ee.Dictionary({}))
+    )
+    .map(fetchBatch)
+    .values()
+    .iterate(
+      (ifc: ee.UncastFeatureCollection, resFc: ee.UncastFeatureCollection) => {
+        return ee.FeatureCollection(resFc).merge(ee.FeatureCollection(ifc));
+      },
+      ee.FeatureCollection([])
+    );
+  return ee.FeatureCollection(data);
+}
 
 // var occurrences = ee.FeatureCollection("ft:1P5obit-elnFpwISENVbXDYUiIdQXBZmVKgsvBhfC");
 
 // var features = occurrences
 // .filterDate('2002', '2019')
 // .filterBounds(cutset_geometry)
-// .sort('time_start')
+// .sort('system:time_start')
 // .limit(10);
 
 // print(fetch(features.toList(features.size())))
@@ -173,7 +167,7 @@ export const fetch = (fc: ee.UncastFeatureCollection): Promise<object> => {
 //   ee.Feature(
 //     ee.Geometry.Point([-97.8072,30.159573]),
 //     ee.Dictionary({
-//         'time_start': ee.Date.fromYMD(2014, 4, 2)
+//         'system:time_start': ee.Date.fromYMD(2014, 4, 2)
 //     })
 //   )
 // ])

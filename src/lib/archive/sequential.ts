@@ -1,4 +1,4 @@
-import * as ee from '@google/earthengine';
+import ee from '@google/earthengine';
 
 const parse = (
   f: ee.UncastFeature,
@@ -6,7 +6,7 @@ const parse = (
 ): ee.Object => {
   const feature = ee.Feature(f);
 
-  const date = ee.Date(feature.get('time_start'));
+  const date = ee.Date(feature.get('system:time_start'));
 
   const ic = ee
     .ImageCollection(collection)

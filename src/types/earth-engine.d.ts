@@ -106,7 +106,7 @@ declare module '@google/earthengine' {
       ): Geometry;
     }
     interface GeometryConstructor {
-      (obj: Object): Geometry;
+      (obj: Object | GeoJSON.Geometry): Geometry;
       Point(coords: [number | Number, number | Number]): Geometry;
       Rectangle(params: {
         coords: List | number[];
@@ -124,7 +124,7 @@ declare module '@google/earthengine' {
       set(position: number, value: string | number | Object): List;
       get(index: number): Object;
       removeAll(other: Object[]): List;
-      reduce(reducer: Reducer): Object;
+      reduce(reducer: Reducer | string): Object;
       sort(): List;
       length(): Number;
       iterate(
@@ -143,6 +143,11 @@ declare module '@google/earthengine' {
       // Extract a property from a feature.
       get(s: String | string): Object;
       setGeometry(geometry: Geometry): Object;
+      copyProperties(
+        source: Feature,
+        properties?: List, // The properties to copy. If omitted, all ordinary (i.e. non-system) properties are copied.
+        exclude?: List // The list of properties to exclude when copying all properties. Must not be specified if properties is
+      ): Object;
       geometry(
         maxError?: Number,
         proj?: Projection,
@@ -165,14 +170,14 @@ declare module '@google/earthengine' {
     export const Reducer: ReducerConstructor;
 
     export interface Join {
-      apply(
+      apply(params: {
         // The primary collection.
-        primary: FeatureCollection,
+        primary: FeatureCollection;
         // The secondary collection.
-        secondary: FeatureCollection,
+        secondary: FeatureCollection;
         // The join condition used to select the matches from the two collections.
-        condition: Filter
-      ): FeatureCollection;
+        condition: Filter;
+      }): FeatureCollection;
     }
     interface JoinConstructor {
       saveAll(obj: {
@@ -312,6 +317,14 @@ declare module '@google/earthengine' {
       map(func: (a: Feature) => Feature): FeatureCollection;
       aggregate_array(property: string | String): Object;
       first(): Feature;
+      // Select properties from each Feature in a collection. It is also possible to call this function with
+      // only string arguments; they will be all be interpreted as propertySelectors (varargs).
+      // Returns the feature collection with selected properties.
+      select(
+        propertySelectors: List | String[] | string[], // A list of names or regexes specifying the attributes to select.
+        newProperties?: List | String[] | string[], // A list of new names for the output properties. Must match the number of properties selected.
+        retainGeometry?: boolean // When false, the result will have a NULL geometry. Defaults to true.
+      ): FeatureCollection;
       aggregate_first(property: string): Object;
       merge(collection: ee.FeatureCollection): ee.FeatureCollection;
       iterate(
@@ -320,14 +333,14 @@ declare module '@google/earthengine' {
       ): Object;
     }
     type FeatureCollectionConstructor = (
-      v: Object[] | List | Object | string
+      v: Object[] | List | Object | string | object[]
     ) => FeatureCollection;
     export const FeatureCollection: FeatureCollectionConstructor;
 
     export interface Date extends Object {
       readonly format: (format?: string, timeZone?: string) => string;
       advance(amount: Number | number, unit: String | string): Date;
-      difference(start: Date, unit: String): Number;
+      difference(start: Date | Object, unit: String | string): Number;
       get(v: string): Object;
       update(o: {
         year?: number | Number;
@@ -353,6 +366,12 @@ declare module '@google/earthengine' {
       eq(name: String | string, value: Object | string): Filter;
       or(...filters: Filter[]): Filter;
       and(...filters: Filter[]): Filter;
+      withinDistance(params: {
+        distance: number;
+        leftField: string;
+        rightField: string;
+        maxError: number;
+      }): Filter;
       equals(obj: {
         leftField?: string | String; // A selector for the left operand. Should not be specified if leftValue is specified.
         rightValue?: Object; // The value of the right operand. Should not be specified if rightField is specified.

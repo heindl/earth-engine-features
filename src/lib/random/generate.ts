@@ -1,4 +1,4 @@
-import * as ee from '@google/earthengine';
+import ee from '@google/earthengine';
 
 const boundary = () => {
   const northAmerica = ee.FeatureCollection(
@@ -66,7 +66,7 @@ const divisionsNext = (numberOfPoints: number) => {
     })
   );
 
-  const totalArea = ee.Number(groupSummations.reduce(ee.Reducer.sum()));
+  const totalArea = ee.Number(groupSummations.reduce('sum'));
 
   const classPoints = groupSummations.map((v: ee.UncastNumber) => {
     return ee
@@ -118,9 +118,7 @@ const divisionsNext = (numberOfPoints: number) => {
       return f.setMulti({
         random: null,
         'system:time_end': dateMs,
-        'system:time_start': dateMs,
-        time_end: dateMs,
-        time_start: dateMs
+        'system:time_start': dateMs
       });
     });
 
@@ -132,7 +130,9 @@ const divisionsNext = (numberOfPoints: number) => {
   // );
 };
 
-export default function(numberOfPoints: number) {
+export default function(
+  numberOfPoints: number
+): Promise<GeoJSON.FeatureCollection> {
   return new Promise((resolve, reject) => {
     const eeRequest = divisionsNext(numberOfPoints);
     eeRequest.evaluate((data, err) => {
@@ -140,13 +140,13 @@ export default function(numberOfPoints: number) {
         reject(err);
         return;
       }
-      resolve(data);
+      resolve(data as GeoJSON.FeatureCollection);
     });
   });
 }
 
 // var out = divisions_next(500)
-// .aggregate_array('time_start')
+// .aggregate_array('system:time_start')
 
 // out = ee.List(out)
 // .map(function(i) {

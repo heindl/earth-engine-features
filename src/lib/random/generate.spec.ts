@@ -2,11 +2,16 @@ import test from 'ava';
 import { initialize } from '../utils/initialize';
 import fetchRandom from './generate';
 
-test('get fire data', async t => {
+test.skip('get random occurrence points', async t => {
   await initialize();
-  const features = await fetchRandom(100);
+  const fc = await fetchRandom(30);
   // tslint:disable:no-console
-  console.log(features);
+  console.log(JSON.stringify(fc));
 
-  t.is(true, true);
+  t.is(fc.features.length, 30);
+
+  // fc.features.forEach((f) => {
+  //   // tslint:disable:no-console
+  //   console.log(JSON.stringify(f))
+  // });
 });

@@ -1,5 +1,4 @@
-import * as ee from '@google/earthengine';
-import * as GeoJSON from 'geojson';
+import ee from '@google/earthengine';
 
 const imageCollections = () => {
   const MODIS_006_MOD13Q1 = ee.ImageCollection('MODIS/006/MOD13Q1');
@@ -168,7 +167,7 @@ const parseImageCollection = (
   const labels = ee
     .List(regions.get(0))
     .slice(3)
-    .set(0, 'time_start');
+    .set(0, 'system:time_start');
   return regions.slice(1).map(regionList => {
     const list = ee.List(regionList);
     const lng = ee.Number(list.get(1));
@@ -183,8 +182,8 @@ const parseImageCollection = (
 const fetchFeature = (uf: ee.UncastFeature) => {
   const f = ee.Feature(uf);
 
-  const startDate = ee.Date(f.get('time_start')).advance(-180, 'day');
-  const endDate = ee.Date(f.get('time_start'));
+  const startDate = ee.Date(f.get('system:time_start')).advance(-180, 'day');
+  const endDate = ee.Date(f.get('system:time_start'));
 
   const valueFeatures = ee
     .FeatureCollection(
@@ -195,7 +194,7 @@ const fetchFeature = (uf: ee.UncastFeature) => {
         })
         .flatten()
     )
-    .sort('time_start');
+    .sort('system:time_start');
 
   const vectors = ee.List(vectorFeatureLabels()).map(s => {
     return valueFeatures.aggregate_array(ee.String(s));
@@ -211,18 +210,6 @@ const fetchFeature = (uf: ee.UncastFeature) => {
   );
 };
 
-export default function(
-  fc: ee.FeatureCollection
-): Promise<GeoJSON.FeatureCollection> {
-  const res = ee.FeatureCollection(fc).map(fetchFeature);
-
-  return new Promise((resolve, reject) => {
-    return res.evaluate((data, err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(data as GeoJSON.FeatureCollection);
-    });
-  });
+export default function(fc: ee.FeatureCollection): ee.FeatureCollection {
+  return ee.FeatureCollection(fc).map(fetchFeature);
 }

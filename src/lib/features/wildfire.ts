@@ -1,7 +1,9 @@
 import ee from '@google/earthengine';
 
-export function fetch(feature: ee.Feature): Promise<object> {
-  const date = ee.Date(feature.get('time_start'));
+const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
+  const feature = ee.Feature(uc);
+
+  const date = ee.Date(feature.get('system:time_start'));
 
   const FIRMS = ee.ImageCollection('FIRMS');
 
@@ -22,28 +24,20 @@ export function fetch(feature: ee.Feature): Promise<object> {
     .removeAll([ee.Number(0)])
     .sort();
 
-  const res = feature.set(
+  return feature.set(
     ee.List([
       ee.String('fire_days_since'),
       ee.Algorithms.If(
         filteredRegions.length(),
-        ee
-          .Date(date)
-          .difference(ee.Date(filteredRegions.get(0)), ee.String('day')),
+        date.difference(filteredRegions.get(0), 'day'),
         ee.Number(-1)
       )
     ])
   );
+};
 
-  return new Promise((resolve, reject) => {
-    res.evaluate((data, err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(data);
-    });
-  });
+export default function(fc: ee.FeatureCollection): ee.FeatureCollection {
+  return ee.FeatureCollection(fc).map(fetchWildfireHistory);
 }
 
 // export const fireRegions = (features: ee.FeatureCollection, startDate: ee.Date, endDate: ee.Date): ee.List<ee.Feature> => {
@@ -64,7 +58,7 @@ export function fetch(feature: ee.Feature): Promise<object> {
 //             ee.Geometry.Point([parseFloat(r.get(1)), parseFloat(r.get(2))]),
 //             ee.Dictionary({
 //                 'fire_value': r.get(4),
-//                 'time_start': r.get(3),
+//                 'system:time_start': r.get(3),
 //             })
 //         )
 //     });
@@ -79,11 +73,11 @@ export function fetch(feature: ee.Feature): Promise<object> {
 // export const parseRegions = (features: ee.FeatureCollection) => {
 //
 //     var collection_start = ee.Date(
-//         features.aggregate_min('time_start')
+//         features.aggregate_min('system:time_start')
 //     ).advance(-5, 'year');
 //
 //     var collection_end = ee.Date(
-//         features.aggregate_max('time_start')
+//         features.aggregate_max('system:time_start')
 //     );
 //
 //     var collection_difference = ee.Number(
@@ -118,15 +112,15 @@ export function fetch(feature: ee.Feature): Promise<object> {
 //
 //     var matched = ee.Join.saveFirst({
 //         matchKey: 'fire_days_since',
-//         ordering: 'time_start',
+//         ordering: 'system:time_start',
 //         ascending: false,
 //     }).apply(
 //         features,
 //         regions,
 //         ee.Filter.and(
 //             ee.Filter.greaterThan({
-//                 leftField: 'time_start',
-//                 rightField: 'time_start'
+//                 leftField: 'system:time_start',
+//                 rightField: 'system:time_start'
 //             }),
 //             ee.Filter.withinDistance({
 //                 distance: 30,
@@ -139,10 +133,10 @@ export function fetch(feature: ee.Feature): Promise<object> {
 //
 //     return matched.map(function(f){
 //         f = ee.Feature(f);
-//         var d = ee.Feature(f.get('fire_days_since')).get('time_start');
+//         var d = ee.Feature(f.get('fire_days_since')).get('system:time_start');
 //         return f.set(ee.Dictionary({
 //             'fire_days_since': ee.Date(
-//                 f.get('time_start')
+//                 f.get('system:time_start')
 //             ).difference(
 //                 ee.Date(d),
 //                 'day'
