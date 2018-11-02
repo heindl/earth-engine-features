@@ -1,4 +1,21 @@
 import ee from '@google/earthengine';
+import { GraphQLFloat, GraphQLList } from 'graphql';
+import { ExampleIDLabel, ExampleTimeLabel } from './example';
+
+const NEAREST_LABEL = 'distanceToNearestSurfaceWater';
+const PERCENTAGE_LABEL = 'surfaceWaterCoverageByRadius';
+
+export const SurfaceWaterFields = {
+  [NEAREST_LABEL]: {
+    description: `Distance to nearest body of surface water, generated from JRC Monthly Water History, v1.0 [JRC/GSW1_0/MonthlyHistory].`,
+    type: GraphQLFloat
+  },
+  [PERCENTAGE_LABEL]: {
+    // TODO: Allow the pixel areas to be set by argument.
+    description: `An array of pixel areas covered by water, of increasingly large regions, generated from JRC Monthly Water History, v1.0 [JRC/GSW1_0/MonthlyHistory].`,
+    type: new GraphQLList(GraphQLFloat),
+  }
+};
 
 const getImage = (date: ee.Date, ufc: ee.UncastFeatureCollection): ee.Image => {
   const ic = ee.ImageCollection('JRC/GSW1_0/MonthlyHistory');
@@ -50,8 +67,8 @@ const aggregateAreaStats = (uf: ee.UncastFeature): ee.Feature => {
   return feature.setMulti(
     ee.Dictionary({
       joined: null,
-      surface_water_distance: distance,
-      surface_water_percentages: ee.Array(waterArea).divide(ee.Array(area))
+      [NEAREST_LABEL]: distance,
+      [PERCENTAGE_LABEL]: ee.Array(waterArea).divide(ee.Array(area))
     })
   );
 };
@@ -76,7 +93,7 @@ const fetchBatch = (
             ee.FeatureCollection(
               ee.Feature(geom, {
                 buffer: ee.Number(v),
-                feature_id: ee.Feature(f).get('system:index')
+                [ExampleIDLabel]: ee.Feature(f).get(ExampleIDLabel)
               })
             )
           );
@@ -95,8 +112,8 @@ const fetchBatch = (
 
   const combined = ee.Join.saveAll({ matchesKey: 'joined' }).apply({
     condition: ee.Filter.equals({
-      leftField: 'system:index',
-      rightField: 'feature_id'
+      leftField: ExampleIDLabel,
+      rightField: ExampleIDLabel
     }),
     primary: ee.FeatureCollection(fc),
     secondary: regions
@@ -110,7 +127,7 @@ const compileBatches = (
   r: ee.UncastDictionary
 ): ee.Dictionary => {
   const feature = ee.Feature(f);
-  const startDate = ee.Date(feature.get('system:time_start'));
+  const startDate = ee.Date(feature.get(ExampleTimeLabel));
   const res = ee.Dictionary(r);
 
   const latestYear = ee
@@ -137,7 +154,7 @@ const compileBatches = (
   );
 };
 
-export default function(fc: ee.FeatureCollection): ee.FeatureCollection {
+export function fetchSurfaceWater(fc: ee.FeatureCollection): ee.FeatureCollection {
   const data = ee
     .Dictionary(
       ee.FeatureCollection(fc).iterate(compileBatches, ee.Dictionary({}))

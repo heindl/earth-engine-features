@@ -1,4 +1,5 @@
 import ee from '@google/earthengine';
+import { ExampleTimeLabel } from './example';
 
 const imageCollections = () => {
   const MODIS_006_MOD13Q1 = ee.ImageCollection('MODIS/006/MOD13Q1');
@@ -173,7 +174,7 @@ const parseImageCollection = (
     const lng = ee.Number(list.get(1));
     const lat = ee.Number(list.get(2));
     return ee.Feature(
-      ee.Geometry.Point([lng, lat]),
+      ee.Geometry.Point(lng, lat),
       ee.Dictionary.fromLists(labels, list.slice(3))
     );
   });
@@ -182,8 +183,9 @@ const parseImageCollection = (
 const fetchFeature = (uf: ee.UncastFeature) => {
   const f = ee.Feature(uf);
 
-  const startDate = ee.Date(f.get('system:time_start')).advance(-180, 'day');
-  const endDate = ee.Date(f.get('system:time_start'));
+  // TODO: Set this as argument
+  const startDate = ee.Date(f.get(ExampleTimeLabel)).advance(-180, 'day');
+  const endDate = ee.Date(f.get(ExampleTimeLabel));
 
   const valueFeatures = ee
     .FeatureCollection(

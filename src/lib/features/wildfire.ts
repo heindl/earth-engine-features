@@ -1,13 +1,24 @@
 import ee from '@google/earthengine';
+import { GraphQLInt } from 'graphql';
+import { ExampleTimeLabel } from './example';
+
+export const WildFireFields = {
+  daysSinceLastWildFire: {
+    description:
+      "Examines the wildfire history for an example location and return the number of days since the last, or -1 if doesn't exist.",
+    type: GraphQLInt
+  }
+};
 
 const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
   const feature = ee.Feature(uc);
 
-  const date = ee.Date(feature.get('system:time_start'));
+  const date = ee.Date(feature.get(ExampleTimeLabel));
 
   const FIRMS = ee.ImageCollection('FIRMS');
 
   const imgs = FIRMS.filterDate(
+    // TODO: Include this value as an arg.
     date.advance(ee.Number(-6.5), ee.String('year')),
     date
   ).select(ee.String('T21'));
@@ -26,7 +37,7 @@ const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
 
   return feature.set(
     ee.List([
-      ee.String('fire_days_since'),
+      ee.String(Object.keys(WildFireFields)[0]),
       ee.Algorithms.If(
         filteredRegions.length(),
         date.difference(filteredRegions.get(0), 'day'),
@@ -36,7 +47,7 @@ const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
   );
 };
 
-export default function(fc: ee.FeatureCollection): ee.FeatureCollection {
+export function fetchWildfire(fc: ee.FeatureCollection): ee.FeatureCollection {
   return ee.FeatureCollection(fc).map(fetchWildfireHistory);
 }
 

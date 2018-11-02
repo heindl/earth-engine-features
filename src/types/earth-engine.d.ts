@@ -107,7 +107,7 @@ declare module '@google/earthengine' {
     }
     interface GeometryConstructor {
       (obj: Object | GeoJSON.Geometry): Geometry;
-      Point(coords: [number | Number, number | Number]): Geometry;
+      Point(x: number | Number, y: number | Number): Geometry;
       Rectangle(params: {
         coords: List | number[];
         proj?: Projection;
@@ -256,7 +256,7 @@ declare module '@google/earthengine' {
       }): FeatureCollection;
     }
     interface ImageConstructor {
-      (v?: string | Image): Image;
+      (v?: string | Image | String): Image;
       pixelArea(): Image;
       pixelLonLat(): Image;
     }

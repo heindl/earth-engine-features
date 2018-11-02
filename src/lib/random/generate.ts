@@ -92,10 +92,10 @@ const divisionsNext = (numberOfPoints: number) => {
       const f = ee.Feature(uc);
       return ee.Feature(
         f.setGeometry(
-          ee.Geometry.Point([
+          ee.Geometry.Point(
             ee.Number(f.get('longitude')),
             ee.Number(f.get('latitude'))
-          ])
+          )
         )
       );
     })
