@@ -267,9 +267,15 @@ declare module '@google/earthengine' {
       sort(s: string | String): ImageCollection;
 
       filter(filter: ee.Filter): ImageCollection;
+      aggregate_array(property: string | String): Object;
+      reduceToImage(params: {
+        properties: string[] | ee.List;
+        reducer: Reducer;
+      }): Image;
 
       first(): Image;
       get(v: string): Object;
+      map(func: (a: Image) => Object): Object;
 
       filterDate(
         start: Date | number | string,

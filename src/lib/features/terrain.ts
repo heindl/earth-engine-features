@@ -3,17 +3,18 @@
 import ee from '@google/earthengine';
 import * as GeoJSON from 'geojson';
 import {
+  FieldNode,
   GraphQLInt,
   GraphQLList,
   GraphQLObjectType,
+  GraphQLResolveInfo,
   GraphQLScalarType,
   Kind
 } from 'graphql';
-import { Example } from './example';
+import { Example, IExample } from './example';
 import { combineFeatureCollections } from './features';
-import { fetchSurfaceWater,SurfaceWaterFields } from './surface-water';
+import { fetchSurfaceWater, SurfaceWaterFields } from './surface-water';
 import { fetchWildfire, WildFireFields } from './wildfire';
-// tslint:disable:no-console
 
 const cutsetGeometry = (): ee.Geometry => {
   return ee.Geometry.Rectangle({
@@ -83,24 +84,26 @@ const shouldFetch = (
   categoryFields: ICategoryGroup,
   queryFields: string[]
 ): boolean => {
-  const reduced = Object.keys(categoryFields).reduce(
+  return Object.keys(categoryFields).reduce(
     (hasBeenFound: boolean, fieldName: string) => {
       return hasBeenFound || queryFields.includes(fieldName);
     },
     false
   );
-
-  console.log('Should Fetch Reduced', Object.keys(categoryFields), reduced);
-  return reduced;
 };
 
-export const TerrainType: GraphQLObjectType = new GraphQLObjectType({
+const TerrainType: GraphQLObjectType = new GraphQLObjectType({
   description: 'Features related to the terrain of the example coordinates.',
-  fields: () => ({ ...ElevationFields, ...WildFireFields, ...LandcoverFields, ...SurfaceWaterFields }),
+  fields: () => ({
+    ...ElevationFields,
+    ...WildFireFields,
+    ...LandcoverFields,
+    ...SurfaceWaterFields
+  }),
   name: 'terrain'
 });
 
-export const resolveTerrain = (
+const resolveTerrain = (
   examples: Example[],
   fields: string[]
 ): Promise<object[]> => {
@@ -133,7 +136,6 @@ export const resolveTerrain = (
         return;
       }
       const rf = (data as GeoJSON.FeatureCollection).features;
-      console.log('rf', JSON.stringify(rf));
       resolve(rf.map(f => f.properties || {}));
     });
   });
@@ -166,4 +168,34 @@ const fetchElevation = (fc: ee.FeatureCollection): ee.FeatureCollection => {
       reducer: ee.call('Reducer.first'),
       scale: 30
     });
+};
+
+function selections(info: GraphQLResolveInfo): string[] {
+  const arrs: string[][] = info.fieldNodes.map(node => {
+    if (!node.selectionSet) {
+      return [];
+    }
+    return node.selectionSet.selections.map(selection => {
+      return (selection as FieldNode).name.value;
+    });
+  });
+  return ([] as string[]).concat(...arrs);
+}
+
+export const TerrainFields = {
+  terrain: {
+    type: TerrainType,
+    description: TerrainType.description,
+    // tslint:disable:variable-name
+    resolve: async (
+      source: IExample,
+      _args: object,
+      _context: object,
+      info: GraphQLResolveInfo
+    ) => {
+      const ex = new Example(source);
+      const terrainFeatures = await resolveTerrain([ex], selections(info));
+      return terrainFeatures[0];
+    }
+  }
 };

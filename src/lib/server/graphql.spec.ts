@@ -4,13 +4,11 @@ import { initialize } from '../utils/initialize';
 import { schema } from './schema';
 
 const source = `{ 
-  example(latitude: 30.159573, longitude: -97.8072, radius: 1000, timestamp: ${new Date(
-    Date.UTC(2015, 5, 9)
-  ).getTime() / 1000}) {
+  example(latitude: 30.159573, longitude: -97.8072, radius: 1000, date: "2015-05-09") {
     latitude
     longitude
     radius
-    timestamp
+    date
     terrain {
       daysSinceLastWildFire
       elevation
@@ -18,8 +16,26 @@ const source = `{
       distanceToNearestSurfaceWater
       surfaceWaterCoverageByRadius
     }
+    TerraVegetation {
+      Normalized
+    }
+    AquaVegetation {
+      Normalized
+    }
   }
 }`;
+
+// latitude
+// longitude
+// radius
+// date
+// terrain {
+//   daysSinceLastWildFire
+//   elevation
+//   landcover
+//   distanceToNearestSurfaceWater
+//   surfaceWaterCoverageByRadius
+// }
 
 test('feature generation', async t => {
   await initialize();
@@ -128,4 +144,3 @@ test('feature generation', async t => {
 //
 //   t.is(true, true);
 // });
-

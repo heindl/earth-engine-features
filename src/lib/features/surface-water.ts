@@ -13,7 +13,7 @@ export const SurfaceWaterFields = {
   [PERCENTAGE_LABEL]: {
     // TODO: Allow the pixel areas to be set by argument.
     description: `An array of pixel areas covered by water, of increasingly large regions, generated from JRC Monthly Water History, v1.0 [JRC/GSW1_0/MonthlyHistory].`,
-    type: new GraphQLList(GraphQLFloat),
+    type: new GraphQLList(GraphQLFloat)
   }
 };
 
@@ -154,7 +154,9 @@ const compileBatches = (
   );
 };
 
-export function fetchSurfaceWater(fc: ee.FeatureCollection): ee.FeatureCollection {
+export function fetchSurfaceWater(
+  fc: ee.FeatureCollection
+): ee.FeatureCollection {
   const data = ee
     .Dictionary(
       ee.FeatureCollection(fc).iterate(compileBatches, ee.Dictionary({}))
