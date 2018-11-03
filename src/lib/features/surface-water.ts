@@ -83,7 +83,8 @@ const fetchBatch = (
   const regionFc = fc.iterate(
     (f: ee.UncastFeature, l: ee.UncastFeatureCollection) => {
       return ee
-        .List([0, 120, 480, 960, 1920, 7680, 30720])
+        // .List([0, 120, 480, 960, 1920, 7680, 30720])
+        .List([0, 120, 480, 960])
         .iterate((v: ee.UncastNumber, iFC: ee.UncastFeatureCollection) => {
           const geom = ee
             .Feature(f)

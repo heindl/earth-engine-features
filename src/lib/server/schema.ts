@@ -7,6 +7,7 @@ import {
   GraphQLSchema
 } from 'graphql';
 import { GraphQLDate } from 'graphql-iso-date';
+import { ClimateIndices } from '../features/climate';
 import { IExample } from '../features/example';
 import { TerrainFields } from '../features/terrain';
 import { VegetationIndices } from '../features/vegetation';
@@ -37,7 +38,8 @@ const ExampleType: GraphQLObjectType = new GraphQLObjectType({
   fields: {
     ...ExampleFields,
     ...VegetationIndices,
-    ...TerrainFields
+    ...TerrainFields,
+    ...ClimateIndices
   }
 });
 

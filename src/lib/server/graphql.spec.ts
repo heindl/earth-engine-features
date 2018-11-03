@@ -22,8 +22,13 @@ const source = `{
     AquaVegetation {
       Normalized
     }
+    Climate {
+      Temperature
+    }
   }
 }`;
+
+
 
 // latitude
 // longitude
@@ -44,7 +49,7 @@ test('feature generation', async t => {
     source
   });
 
-  t.log('data', data.data, data.errors);
+  t.log('data', JSON.stringify(data.data));
 
   t.is(true, true);
 });
