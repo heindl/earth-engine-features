@@ -14,20 +14,12 @@ let graphQLServer: express.Express;
 export const buildGraphQLServer = (): Promise<express.Express> => {
   return new Promise((resolve, reject) => {
     if (graphQLServer) {
-      // tslint:disable
-      console.log('returning server immediately');
       return resolve(graphQLServer);
     }
     initialize()
       .then(() => {
         graphQLServer = express();
-        graphQLServer.post(
-          '/',
-          graphqlHTTP({
-            schema: schema,
-            // graphiql: true
-          })
-        );
+        graphQLServer.post('/', graphqlHTTP({ schema }));
         resolve(graphQLServer);
       })
       .catch(reject);
