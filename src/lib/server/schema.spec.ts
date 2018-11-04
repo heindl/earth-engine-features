@@ -28,8 +28,6 @@ const source = `{
   }
 }`;
 
-
-
 // latitude
 // longitude
 // radius
@@ -42,7 +40,7 @@ const source = `{
 //   surfaceWaterCoverageByRadius
 // }
 
-test('feature generation', async t => {
+test.skip('feature generation', async t => {
   await initialize();
   const data = await graphql({
     schema,

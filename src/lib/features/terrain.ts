@@ -8,9 +8,9 @@ import {
   GraphQLList,
   GraphQLObjectType,
   GraphQLResolveInfo,
-  GraphQLScalarType,
-  Kind
+  GraphQLScalarType
 } from 'graphql';
+import GraphQLJSON from 'graphql-type-json';
 import { Example, IExample } from './example';
 import { combineFeatureCollections } from './features';
 import { fetchSurfaceWater, SurfaceWaterFields } from './surface-water';
@@ -46,30 +46,30 @@ const ElevationFields = {
   }
 };
 
-const LandcoverType = new GraphQLScalarType({
-  name: 'Landcover',
-  description:
-    'A dictionary of landcover id to weighted histogram value within input space.',
-  serialize(histogram: { [key: string]: number }): string {
-    return JSON.stringify(histogram);
-  },
-  parseValue(s: string): { [key: string]: number } {
-    return JSON.parse(s);
-  },
-  parseLiteral(ast): { [key: string]: number } | null {
-    switch (ast.kind) {
-      case Kind.STRING:
-        return JSON.parse(ast.value); // ast value is always in string format
-      default:
-        return null;
-    }
-  }
-});
+// const LandcoverType = new GraphQLScalarType({
+//   name: 'Landcover',
+//   description:
+//     'A dictionary of landcover id to weighted histogram value within input space.',
+//   serialize(histogram: { [key: string]: number }): string {
+//     return JSON.stringify(histogram);
+//   },
+//   parseValue(s: string): { [key: string]: number } {
+//     return JSON.parse(s);
+//   },
+//   parseLiteral(ast): { [key: string]: number } | null {
+//     switch (ast.kind) {
+//       case Kind.STRING:
+//         return JSON.parse(ast.value); // ast value is always in string format
+//       default:
+//         return null;
+//     }
+//   }
+// });
 
 const LandcoverFields = {
   landcover: {
     description: `The landcover category generated from ${LandcoverImage()}.`,
-    type: LandcoverType
+    type: GraphQLJSON
   }
 };
 

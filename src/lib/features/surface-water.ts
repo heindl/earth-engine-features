@@ -82,23 +82,25 @@ const fetchBatch = (
 
   const regionFc = fc.iterate(
     (f: ee.UncastFeature, l: ee.UncastFeatureCollection) => {
-      return ee
-        // .List([0, 120, 480, 960, 1920, 7680, 30720])
-        .List([0, 120, 480, 960])
-        .iterate((v: ee.UncastNumber, iFC: ee.UncastFeatureCollection) => {
-          const geom = ee
-            .Feature(f)
-            .geometry()
-            .buffer(ee.Number(v).multiply(2), 30);
-          return ee.FeatureCollection(iFC).merge(
-            ee.FeatureCollection(
-              ee.Feature(geom, {
-                buffer: ee.Number(v),
-                [ExampleIDLabel]: ee.Feature(f).get(ExampleIDLabel)
-              })
-            )
-          );
-        }, ee.FeatureCollection(l));
+      return (
+        ee
+          // .List([0, 120, 480, 960, 1920, 7680, 30720])
+          .List([0, 120, 480, 960])
+          .iterate((v: ee.UncastNumber, iFC: ee.UncastFeatureCollection) => {
+            const geom = ee
+              .Feature(f)
+              .geometry()
+              .buffer(ee.Number(v).multiply(2), 30);
+            return ee.FeatureCollection(iFC).merge(
+              ee.FeatureCollection(
+                ee.Feature(geom, {
+                  buffer: ee.Number(v),
+                  [ExampleIDLabel]: ee.Feature(f).get(ExampleIDLabel)
+                })
+              )
+            );
+          }, ee.FeatureCollection(l))
+      );
     },
     ee.FeatureCollection([])
   );
