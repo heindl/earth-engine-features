@@ -1,12 +1,7 @@
 import test from 'ava';
+import express from 'express';
 import Supertest, { Response } from 'supertest';
-import { buildGraphQLServer } from './server';
-
-// curl \
-//   -X POST \
-//   -H "Content-Type: application/json" \
-//   --data '{ "query": "{ posts { title } }" }' \
-//   https://1jzxrj179.lp.gql.zone/graphql
+import { geographql } from './functions';
 
 const q = {
   query: `{ 
@@ -36,19 +31,18 @@ const q = {
 };
 
 test.cb('fetch graphql', t => {
-  buildGraphQLServer()
-    .then(app => {
-      Supertest(app)
-        .post('/')
-        .send(q)
-        .expect(200)
-        .expect((res: Response) => {
-          // tslint:disable:no-console
-          console.log(res.body);
-        })
-        .end(t.end);
+  const server = express();
+  server.post('*', geographql);
+
+  Supertest(server)
+    .post('/')
+    .send(q)
+    .expect(200)
+    .expect((res: Response) => {
+      // tslint:disable:no-console
+      console.log(res.body);
     })
-    .catch(t.fail);
+    .end(t.end);
 });
 
 // import test from 'ava';

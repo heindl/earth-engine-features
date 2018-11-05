@@ -7,8 +7,11 @@ tslint.json
 .github
 .prettierignore
 .vscode
+.idea
 build/docs
 **/*.spec.*
 coverage
 .nyc_output
 *.log
+.env
+cloudbuild.yaml

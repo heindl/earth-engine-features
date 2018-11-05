@@ -2,13 +2,25 @@ import ee from '@google/earthengine';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+let hasInitialized = false;
+
 export const initialize = async () => {
-  const privateKey = require(process.env.GOOGLE_APPLICATION_CREDENTIALS || '');
+  if (hasInitialized) {
+    return;
+  }
   return new Promise((resolve, reject) => {
     return ee.data.authenticateViaPrivateKey(
-      privateKey,
+      require(process.env.GOOGLE_APPLICATION_CREDENTIALS || ''),
       () => {
-        return ee.initialize(null, null, resolve, reject);
+        return ee.initialize(
+          null,
+          null,
+          () => {
+            hasInitialized = true;
+            resolve();
+          },
+          reject
+        );
       },
       reject
     );
