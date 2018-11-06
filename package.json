@@ -33,7 +33,8 @@
     "reset": "git clean -dfx && git reset --hard && npm i",
     "clean": "trash build test",
     "all": "run-s reset test cov:check doc:html",
-    "prepare-release": "run-s all version doc:publish"
+    "prepare-release": "run-s all version doc:publish",
+    "serve": "run-s build && node ./build/main/lib/server/server.js"
   },
   "scripts-info": {
     "info": "Display information about the package scripts",
@@ -52,6 +53,7 @@
     "node": ">=8.9"
   },
   "dependencies": {
+    "@2fd/graphdoc": "^2.4.0",
     "@google/earthengine": "^0.1.153",
     "crypto": "^1.0.1",
     "dotenv": "^6.1.0",
@@ -115,5 +117,9 @@
     "exclude": [
       "**/*.spec.js"
     ]
+  },
+  "graphdoc": {
+    "endpoint": "http://localhost:4000",
+    "output": "./build/doc/schema"
   }
 }

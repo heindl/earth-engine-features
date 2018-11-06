@@ -1,22 +1,26 @@
 // tslint:disable:object-literal-sort-keys variable-name
 
 import ee from '@google/earthengine';
-import * as GeoJSON from 'geojson';
 import {
   GraphQLFieldConfig,
+  GraphQLFieldConfigMap,
   GraphQLFloat,
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
 import {
-  Example,
+  Context,
   ExampleIntervalStartTimeLabel,
   ExampleTimeLabel,
-  IExample
-} from './example';
+  IOccurrenceArgs
+} from './occurrence';
+import { registerEarthEngineCaller } from './query';
 
 const ClimateImageName = 'NOAA/CFSV2/FOR6H';
+const GeoPotentialHeightLabel = 'GeopotentialHeight';
 
+// Note that the order of these bands must match the order of ClimateIndexTypeFields,
+// with GeoPotentialHeightLabel at the end.
 const BANDS = [
   'Latent_heat_net_flux_surface_6_Hour_Average',
   'Sensible_heat_net_flux_surface_6_Hour_Average',
@@ -30,10 +34,13 @@ const BANDS = [
   'Pressure_surface',
   'u-component_of_wind_height_above_ground',
   'v-component_of_wind_height_above_ground',
-  'Geopotential_height_surface'
+  'Geopotential_height_surface' // Order is important!!!
 ];
 
-export const ClimateIndicesFields = {
+const ClimateIndexTypeFields: GraphQLFieldConfigMap<
+  IOccurrenceArgs,
+  Context
+> = {
   LatentHeatNetFlux: {
     description: `
       Latent heat is the heat moved by water evaporating and
@@ -132,35 +139,13 @@ export const ClimateIndicesFields = {
        and a negative v wind is from the north.
     `,
     type: new GraphQLList(GraphQLFloat)
-  },
-  // TODO: Consider moving to elevation.
-  GeopotentialHeight: {
-    description: `Geopotential height is a vertical coordinate referenced to Earth's mean sea level, an adjustment
-     to geometric height (elevation above mean sea level) using the variation of gravity with latitude and
-     elevation. Thus, it can be considered a "gravity-adjusted height". It should be the same for each day.
-    `,
-    resolve: async (source: { GeopotentialHeight: number[] }) => {
-      return {
-        ...{ GeopotentialHeight: source.GeopotentialHeight[0] },
-        ...source
-      };
-    },
-    type: GraphQLFloat
   }
 };
 
-const ClimateIndicesType: GraphQLObjectType = new GraphQLObjectType({
-  fields: () => ClimateIndicesFields,
-  name: 'ClimateIndices'
-});
-
-// tslint:disable:variable-name
-export const ClimateIndices: {
-  [key: string]: GraphQLFieldConfig<IExample, object>;
-} = {
-  Climate: {
-    description: `The National Centers for Environmental Prediction (NCEP) Climate Forecast System (CFS) is a fully 
-      coupled model representing the interaction between the Earth's atmosphere, oceans, land, and sea ice. 
+const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
+  description: `
+  The National Centers for Environmental Prediction (NCEP) Climate Forecast System (CFS)
+   A fully coupled model representing the interaction between the Earth's atmosphere, oceans, land, and sea ice. 
       
       CFS was developed at the Environmental Modeling Center (EMC) at NCEP. 
       The operational CFS was upgraded to version 2 (CFSv2) on March 30, 2011.
@@ -169,18 +154,30 @@ export const ClimateIndices: {
       This is the same model that was used to create the NCEP Climate Forecast System 
       Reanalysis (CFSR), and the purpose of the CFSv2 dataset is to extend CFSR. We ingest 
       only a subset of bands from files matching cdas1.t??z.sfluxgrbf06.grib2.`,
-    resolve: async (source: IExample, _args: object, _context: object) => {
-      const ex = new Example(source);
-      // TODO: Set this as argument
-      const data = await fetchFeatureCollectionData([ex], 7);
-      return data[0];
-    },
-    type: ClimateIndicesType
+  fields: () => ClimateIndexTypeFields,
+  name: 'ClimateIndexFields'
+});
+
+// tslint:disable:variable-name
+const ClimateIndexFields: {
+  [key: string]: GraphQLFieldConfig<IOccurrenceArgs, object>;
+} = {
+  Climate: {
+    description: ClimateIndexType.description,
+    type: ClimateIndexType
+  },
+  [GeoPotentialHeightLabel]: {
+    description: `A vertical coordinate referenced to Earth's mean sea level, an adjustment
+     to geometric height (elevation above mean sea level) using the variation of gravity with latitude and
+     elevation. Thus, it can be considered a "gravity-adjusted height".
+    `,
+    type: GraphQLFloat
   }
 };
 
 function getFeature(feature: ee.Feature): ee.Feature {
-  const vectorLabels = ee.List(Object.keys(ClimateIndicesFields));
+  const vectorLabels = Object.keys(ClimateIndexTypeFields);
+  vectorLabels.push(GeoPotentialHeightLabel);
 
   const uic = ee
     .ImageCollection(ClimateImageName)
@@ -190,7 +187,7 @@ function getFeature(feature: ee.Feature): ee.Feature {
   const endDate = ee.Date(feature.get(ExampleTimeLabel));
   const startDate = ee.Date(feature.get(ExampleIntervalStartTimeLabel));
 
-  const properties = ee.FeatureCollection(
+  const reducedFeatures = ee.FeatureCollection(
     ee
       .ImageCollection(uic)
       .filterDate(startDate, endDate)
@@ -205,36 +202,27 @@ function getFeature(feature: ee.Feature): ee.Feature {
       })
   );
 
-  return ee.Feature(
-    ee.List(vectorLabels).iterate((label, current) => {
-      return ee
-        .Feature(current)
-        .set(
-          ee.List([
-            ee.String(label),
-            ee.FeatureCollection(properties).aggregate_array(ee.String(label))
-          ])
-        );
-    }, feature)
+  const properties = ee.List(vectorLabels).iterate((label, current) => {
+    return ee
+      .Dictionary(current)
+      .set(
+        ee.String(label),
+        ee.FeatureCollection(reducedFeatures).aggregate_array(ee.String(label))
+      );
+  }, ee.Dictionary({}));
+
+  return feature.set(
+    ee.Dictionary({
+      [GeoPotentialHeightLabel]: ee
+        .FeatureCollection(reducedFeatures)
+        .aggregate_first(GeoPotentialHeightLabel),
+      Climate: ee.Dictionary(properties)
+    })
   );
 }
 
 // TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
-function fetchFeatureCollectionData(
-  examples: Example[],
-  intervalDaysBefore: number // Default -180
-): Promise<object[]> {
-  const initialFC = ee.FeatureCollection(
-    ee.List(examples.map(e => e.toEarthEngineFeature({ intervalDaysBefore })))
-  );
-  return new Promise((resolve, reject) => {
-    initialFC.map(getFeature).evaluate((data, err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      const rf = (data as GeoJSON.FeatureCollection).features;
-      resolve(rf.map(f => f.properties || {}));
-    });
-  });
-}
+
+registerEarthEngineCaller(ClimateIndexFields, (fc: ee.FeatureCollection) => {
+  return ee.FeatureCollection(fc).map(getFeature);
+});

@@ -1,14 +1,38 @@
 import ee from '@google/earthengine';
-import { GraphQLInt } from 'graphql';
-import { ExampleTimeLabel } from './example';
+import { GraphQLFieldConfigMap, GraphQLInt, GraphQLObjectType } from 'graphql';
+import { Context, ExampleTimeLabel, IOccurrenceArgs } from './occurrence';
+import { registerEarthEngineCaller } from './query';
 
-export const WildFireFields = {
-  daysSinceLastWildFire: {
+const WildfireTypeFields: GraphQLFieldConfigMap<IOccurrenceArgs, Context> = {
+  DaysSinceLast: {
     description:
-      "Examines the wildfire history for an example location and return the number of days since the last, or -1 if doesn't exist.",
+      "The number of days since the last wildfire, or -1 if doesn't exist.",
     type: GraphQLInt
   }
 };
+
+const WildfireType: GraphQLObjectType = new GraphQLObjectType({
+  description: `
+     The Fire Information for Resource Management System (FIRMS) dataset contains the LANCE fire 
+     detection product in rasterized form. The near real-time (NRT) active fire locations are 
+     processed by LANCE using the standard MODIS MOD14/MYD14 Fire and Thermal Anomalies product. 
+  `,
+  fields: () => WildfireTypeFields,
+  name: 'Wildfire'
+});
+
+const WildfireFields: GraphQLFieldConfigMap<IOccurrenceArgs, Context> = {
+  Wildfire: {
+    description: WildfireType.description,
+    type: WildfireType
+  }
+};
+
+function resolveWildfire(fc: ee.FeatureCollection): ee.FeatureCollection {
+  return ee.FeatureCollection(fc).map(fetchWildfireHistory);
+}
+
+registerEarthEngineCaller(WildfireFields, resolveWildfire);
 
 const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
   const feature = ee.Feature(uc);
@@ -36,20 +60,17 @@ const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
     .sort();
 
   return feature.set(
-    ee.List([
-      ee.String(Object.keys(WildFireFields)[0]),
-      ee.Algorithms.If(
-        filteredRegions.length(),
-        date.difference(filteredRegions.get(0), 'day'),
-        ee.Number(-1)
-      )
-    ])
+    ee.Dictionary({
+      [Object.keys(WildfireFields)[0]]: ee.Dictionary({
+        [Object.keys(WildfireTypeFields)[0]]: ee.Algorithms.If(
+          filteredRegions.length(),
+          date.difference(filteredRegions.get(0), 'day'),
+          ee.Number(-1)
+        )
+      })
+    })
   );
 };
-
-export function fetchWildfire(fc: ee.FeatureCollection): ee.FeatureCollection {
-  return ee.FeatureCollection(fc).map(fetchWildfireHistory);
-}
 
 // export const fireRegions = (features: ee.FeatureCollection, startDate: ee.Date, endDate: ee.Date): ee.List<ee.Feature> => {
 //

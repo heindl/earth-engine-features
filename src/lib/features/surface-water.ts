@@ -1,19 +1,54 @@
 import ee from '@google/earthengine';
-import { GraphQLFloat, GraphQLList } from 'graphql';
-import { ExampleIDLabel, ExampleTimeLabel } from './example';
+import {
+  GraphQLFieldConfigMap,
+  GraphQLFloat,
+  GraphQLList,
+  GraphQLObjectType
+} from 'graphql';
+import {
+  Context,
+  ExampleIDLabel,
+  ExampleTimeLabel,
+  IOccurrenceArgs
+} from './occurrence';
+import { registerEarthEngineCaller } from './query';
 
-const NEAREST_LABEL = 'distanceToNearestSurfaceWater';
-const PERCENTAGE_LABEL = 'surfaceWaterCoverageByRadius';
+const NEAREST_LABEL = 'DistanceToNearest';
+const PERCENTAGE_LABEL = 'CoverageByRadius';
 
-export const SurfaceWaterFields = {
+export const SurfaceWaterTypeFields: GraphQLFieldConfigMap<
+  IOccurrenceArgs,
+  Context
+> = {
   [NEAREST_LABEL]: {
+    // TODO: Set this as a known scale, such as meters.
     description: `Distance to nearest body of surface water, generated from JRC Monthly Water History, v1.0 [JRC/GSW1_0/MonthlyHistory].`,
     type: GraphQLFloat
   },
   [PERCENTAGE_LABEL]: {
     // TODO: Allow the pixel areas to be set by argument.
+    // TODO: Set this as a known measurement.
     description: `An array of pixel areas covered by water, of increasingly large regions, generated from JRC Monthly Water History, v1.0 [JRC/GSW1_0/MonthlyHistory].`,
     type: new GraphQLList(GraphQLFloat)
+  }
+};
+
+const SurfaceWaterType: GraphQLObjectType = new GraphQLObjectType({
+  description: `
+     JRC Monthly Water History, v1.0
+     These data were generated using 3,066,102 scenes from Landsat 5, 7, and 8 acquired between 
+     16 March 1984 and 10 October 2015. Each pixel was individually classified into water / non-water 
+     using an expert system and the results were collated into a monthly history for the entire time 
+     period and two epochs (1984-1999, 2000-2015) for change detection.
+  `,
+  fields: () => SurfaceWaterTypeFields,
+  name: 'SurfaceWater'
+});
+
+const SurfaceWaterFields: GraphQLFieldConfigMap<IOccurrenceArgs, Context> = {
+  SurfaceWater: {
+    description: SurfaceWaterType.description,
+    type: SurfaceWaterType
   }
 };
 
@@ -66,9 +101,11 @@ const aggregateAreaStats = (uf: ee.UncastFeature): ee.Feature => {
 
   return feature.setMulti(
     ee.Dictionary({
-      joined: null,
-      [NEAREST_LABEL]: distance,
-      [PERCENTAGE_LABEL]: ee.Array(waterArea).divide(ee.Array(area))
+      SurfaceWater: ee.Dictionary({
+        [NEAREST_LABEL]: distance,
+        [PERCENTAGE_LABEL]: ee.Array(waterArea).divide(ee.Array(area))
+      }),
+      joined: null
     })
   );
 };
@@ -157,7 +194,7 @@ const compileBatches = (
   );
 };
 
-export function fetchSurfaceWater(
+export function resolveSurfaceWater(
   fc: ee.FeatureCollection
 ): ee.FeatureCollection {
   const data = ee
@@ -174,6 +211,8 @@ export function fetchSurfaceWater(
     );
   return ee.FeatureCollection(data);
 }
+
+registerEarthEngineCaller(SurfaceWaterFields, resolveSurfaceWater);
 
 // var occurrences = ee.FeatureCollection("ft:1P5obit-elnFpwISENVbXDYUiIdQXBZmVKgsvBhfC");
 

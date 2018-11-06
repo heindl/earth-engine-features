@@ -1,27 +1,31 @@
 import test from 'ava';
-import express from 'express';
 import Supertest, { Response } from 'supertest';
-import { geographql } from './functions';
+import server from './server';
 
 const q = {
   query: `{ 
-  example(latitude: 30.159573, longitude: -97.8072, radius: 1000, date: "2015-05-09") {
-    latitude
-    longitude
-    radius
-    date
-    terrain {
-      daysSinceLastWildFire
-      elevation
-      landcover
-      distanceToNearestSurfaceWater
-      surfaceWaterCoverageByRadius
+  Occurrence(latitude: 30.159573, longitude: -97.8072, radius: 1000, date: "2015-05-09") {
+    Latitude
+    Longitude
+    Radius
+    Date
+    Elevation
+    Landcover
+    Aspect
+    Hillshade
+    GeopotentialHeight
+    SurfaceWater{
+      DistanceToNearest
+      CoverageByRadius
     }
     TerraVegetation {
       Normalized
     }
     AquaVegetation {
       Normalized
+    }
+    Wildfire {
+      DaysSinceLast
     }
     Climate {
       Temperature
@@ -30,10 +34,19 @@ const q = {
 }`
 };
 
-test.cb('fetch graphql', t => {
-  const server = express();
-  server.post('*', geographql);
+// terrain {
+//   daysSinceLastWildFire
+//   elevation
+//   landcover
+//   distanceToNearestSurfaceWater
+//   surfaceWaterCoverageByRadius
+// }
 
+// Climate {
+//   Temperature
+// }
+
+test.cb('fetch graphql', t => {
   Supertest(server)
     .post('/')
     .send(q)

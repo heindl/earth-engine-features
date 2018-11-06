@@ -1,11 +1,15 @@
 // tslint:disable:ban-types variable-name array-type
-
 declare module '@google/earthengine' {
   namespace ee {
     export function call(s: string): Reducer;
 
     export interface Object {
-      evaluate(callback: (success: object, failure: Error) => void): void;
+      evaluate(
+        callback: (
+          success: object | GeoJSON.FeatureCollection,
+          failure: Error
+        ) => void
+      ): void;
     }
 
     export type UncastFeatureCollection = Object;
@@ -225,7 +229,7 @@ declare module '@google/earthengine' {
         maxPixels?: number;
         tileScale?: number;
       }): Dictionary;
-      select(bands: string[] | string): Image;
+      select(bands: string[] | string, names?: string[] | string): Image;
       eq(obj: Image | String | Number): Image;
       fastDistanceTransform(
         // Neighborhood size in pixels, default 256
