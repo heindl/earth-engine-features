@@ -4,47 +4,43 @@ import * as GeoJSON from 'geojson';
 import {
   FieldNode,
   GraphQLFieldConfigMap,
+  GraphQLList,
   GraphQLObjectType,
   GraphQLObjectTypeConfig,
   GraphQLResolveInfo,
   GraphQLSchema
 } from 'graphql';
+import { generateRandomFeatures } from '../random/generate';
+import {
+  IManyOccurrenceArgs,
+  IOneOccurrenceArgs,
+  IRandomOccurrenceArgs,
+  ManyOccurrenceArgs,
+  OneOccurrenceArgs,
+  RandomOccurrenceArgs
+} from './args';
 import {
   Context,
-  ExampleIDLabel,
-  IOccurrenceArgs,
-  Occurrence,
-  OccurrenceArgs,
-  OccurrenceFields
+  ILocationFields,
+  Labels,
+  LocationFields,
+  Occurrence
 } from './occurrence';
 
 // TODO: Consider this for flattening results:
 // https://github.com/chasingmaxwell/graphql-leveler
 
-const OccurrenceTypeConfig: GraphQLObjectTypeConfig<
-  IOccurrenceArgs,
-  Context
-> = {
-  name: 'Occurrence',
-  description: 'Features related to the terrain of the occurrence coordinates.',
-  fields: { ...OccurrenceFields }
-};
+// TODO: This looks interesting for simplificaton:
+// https://www.npmjs.com/package/type-graphql
 
 type EarthEngineCaller = (col: ee.FeatureCollection) => ee.FeatureCollection;
 
 const EarthEngineCallers: Map<string, EarthEngineCaller> = new Map();
 
 export const registerEarthEngineCaller = (
-  fields: GraphQLFieldConfigMap<IOccurrenceArgs, Context>,
+  fields: GraphQLFieldConfigMap<IQueryResult, Context>,
   caller: EarthEngineCaller
 ) => {
-  // tslint:disable:no-console
-  console.log(
-    'keys',
-    Object.keys(fields)
-      .sort()
-      .join(',')
-  );
   EarthEngineCallers.set(
     Object.keys(fields)
       .sort()
@@ -52,6 +48,15 @@ export const registerEarthEngineCaller = (
     caller
   );
   OccurrenceTypeConfig.fields = { ...fields, ...OccurrenceTypeConfig.fields };
+};
+
+const getEarthEngineCallers = (info: GraphQLResolveInfo) => {
+  const fieldNameRe = new RegExp(`(^|,)(${fieldNames(info).join('|')})(,|$)`);
+  return Array.from(EarthEngineCallers.keys())
+    .map(v => {
+      return v.search(fieldNameRe) === -1 ? null : EarthEngineCallers.get(v);
+    })
+    .filter(notEmpty);
 };
 
 const fieldNames = (info: GraphQLResolveInfo): string[] => {
@@ -66,10 +71,14 @@ const fieldNames = (info: GraphQLResolveInfo): string[] => {
   return ([] as string[]).concat(...arrs);
 };
 
+export interface IQueryResult extends ILocationFields {
+  [key: string]: any;
+}
+
 export const queryEarthEngine = (
   initialFC: ee.FeatureCollection,
   callers: EarthEngineCaller[]
-): Promise<any[]> => {
+): Promise<IQueryResult[]> => {
   initialFC = ee.FeatureCollection(initialFC);
 
   const mergedFC = callers.reduce(
@@ -83,8 +92,8 @@ export const queryEarthEngine = (
     matchesKey: 'matches'
   }).apply({
     condition: ee.Filter.equals({
-      leftField: ExampleIDLabel,
-      rightField: ExampleIDLabel
+      leftField: Labels.ID,
+      rightField: Labels.ID
     }),
     primary: ee.FeatureCollection(initialFC),
     secondary: ee.FeatureCollection(mergedFC)
@@ -110,77 +119,88 @@ export const queryEarthEngine = (
       }
       resolve(
         (data as GeoJSON.FeatureCollection).features
-          .map(f => f.properties)
+          .map(f => f.properties as IQueryResult)
           .filter(notEmpty)
       );
     });
   });
 };
 
+const OccurrenceTypeConfig: GraphQLObjectTypeConfig<IQueryResult, Context> = {
+  name: 'Occurrence',
+  description: 'Features related to the terrain of the occurrence coordinates.',
+  fields: { ...LocationFields }
+};
+
 function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
   return value !== null && value !== undefined;
 }
 
+// tslint:disable:variable-name
+const resolveOne = async (
+  _source: any,
+  args: { [k: string]: any },
+  _context: any,
+  info: GraphQLResolveInfo
+) => {
+  const a = args as IOneOccurrenceArgs;
+  return queryEarthEngine(
+    ee.FeatureCollection([new Occurrence(a).toEarthEngineFeature(a)]),
+    getEarthEngineCallers(info)
+  );
+};
+
+const resolveMany = async (
+  _source: any,
+  args: { [k: string]: any },
+  _context: any,
+  info: GraphQLResolveInfo
+) => {
+  const a = args as IManyOccurrenceArgs;
+  return queryEarthEngine(
+    ee.FeatureCollection(
+      a.locations.map(o => new Occurrence(o).toEarthEngineFeature(a))
+    ),
+    getEarthEngineCallers(info)
+  );
+};
+
+const resolveRandom = async (
+  _source: any,
+  args: { [k: string]: any },
+  _context: any,
+  info: GraphQLResolveInfo
+) => {
+  const a = args as IRandomOccurrenceArgs;
+  return queryEarthEngine(
+    generateRandomFeatures(a),
+    getEarthEngineCallers(info)
+  );
+};
+
 const queryType = () => {
+  const oc = new GraphQLObjectType(OccurrenceTypeConfig);
   return new GraphQLObjectType({
-    name: 'QueryType',
-    description: 'The root query type',
+    description: 'root query type',
     fields: () => ({
-      Occurrence: {
-        type: new GraphQLObjectType(OccurrenceTypeConfig),
+      one: {
+        type: oc,
         description: OccurrenceTypeConfig.description,
-        args: OccurrenceArgs,
-        // tslint:disable:variable-name
-        resolve: async (
-          _source: any,
-          args: { [key: string]: any },
-          _context: any,
-          info: GraphQLResolveInfo
-        ) => {
-          const occurrences = [new Occurrence(args as IOccurrenceArgs)];
-
-          const fieldNameRe = new RegExp(
-            `(^|,)(${fieldNames(info).join('|')})(,|$)`
-          );
-
-          // tslint:disable:no-console
-          // console.log(fieldNameRe);
-
-          const callers: EarthEngineCaller[] = Array.from(
-            EarthEngineCallers.keys()
-          )
-            .map(v => {
-              return v.search(fieldNameRe) === -1
-                ? null
-                : EarthEngineCallers.get(v);
-            })
-            .filter(notEmpty);
-
-          const occurrenceProperties = await queryEarthEngine(
-            // TODO: Parse max interval days before from info or args.
-            ee.FeatureCollection(
-              occurrences.map(o =>
-                o.toEarthEngineFeature({ intervalDaysBefore: 30 })
-              )
-            ),
-            callers
-          );
-
-          // console.log('occurrence properties', occurrenceProperties);
-
-          return occurrences
-            .map(o => {
-              occurrenceProperties.forEach(p => {
-                if (p[ExampleIDLabel] === o.id) {
-                  o.setProperties(p);
-                }
-              });
-              return o;
-            })[0]
-            .resolve();
-        }
+        args: OneOccurrenceArgs,
+        resolve: resolveOne
+      },
+      many: {
+        type: new GraphQLList(oc),
+        args: ManyOccurrenceArgs,
+        resolve: resolveMany
+      },
+      random: {
+        type: new GraphQLList(oc),
+        args: RandomOccurrenceArgs,
+        resolve: resolveRandom
       }
-    })
+    }),
+    name: 'QueryType'
   });
 };
 

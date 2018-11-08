@@ -152,6 +152,10 @@ declare module '@google/earthengine' {
         properties?: List, // The properties to copy. If omitted, all ordinary (i.e. non-system) properties are copied.
         exclude?: List // The list of properties to exclude when copying all properties. Must not be specified if properties is
       ): Object;
+      select(
+        propertySelectors: string[] | ee.List,
+        newProperties?: string[] | ee.List
+      ): ee.Feature;
       geometry(
         maxError?: Number,
         proj?: Projection,

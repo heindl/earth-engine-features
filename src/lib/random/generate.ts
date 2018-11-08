@@ -1,15 +1,15 @@
 import ee from '@google/earthengine';
+import { IRandomOccurrenceArgs } from '../features/args';
+import { Labels } from '../features/occurrence';
 
 const boundary = () => {
   const northAmerica = ee.FeatureCollection(
     'ft:1tdSwUL7MVpOauSgRzqVTOwdfy17KDbw-1d9omPw'
   );
-
   const cutsetGeometry = ee.Geometry.Rectangle({
     coords: [-145.1767463, 24.5465169, -49.0, 59.5747563],
     geodesic: false
   });
-
   const northAmericaGeometry = northAmerica
     .filter(
       ee.Filter.or(
@@ -19,21 +19,15 @@ const boundary = () => {
       )
     )
     .geometry(500);
-  // 8% bonus on + 130,000, lti + 10 to 15 k
   return northAmericaGeometry.intersection(cutsetGeometry, 500);
 };
 
-const randomTimeStart = 1262304000000; // 2010
-// const randomTimeEnd = 1388534400000; // 2014
-const randomTimeSpan = 126230400000; // 4 yrs
-
-const divisionsNext = (numberOfPoints: number) => {
+const ecoRegionImage = (): ee.Image => {
   const bounds = ee.Geometry(boundary());
   const ecoregions = ee.FeatureCollection(
     'ft:1Ec8IWsP8asxN-ywSqgXWMuBaxI6pPaeh6hC64lA'
   );
-
-  const img = ee.Image.pixelArea()
+  return ee.Image.pixelArea()
     .addBands(
       ee
         .Image()
@@ -42,8 +36,10 @@ const divisionsNext = (numberOfPoints: number) => {
         .rename(['ECO_NUM'])
     )
     .clip(bounds);
+};
 
-  const groups = ee.List(
+const ecoRegionGroups = (img: ee.Image): ee.List => {
+  return ee.List(
     img
       .reduceRegion({
         bestEffort: true,
@@ -55,72 +51,94 @@ const divisionsNext = (numberOfPoints: number) => {
       })
       .get('groups')
   );
+};
 
-  const labels = groups.map((r: ee.UncastDictionary) => {
-    return ee.Number(ee.Dictionary(r).get('label'));
-  });
-
+// A list of the per-class maximum number of pixels to sample for each class in the classValues list.
+// The same size as classValues.
+const maxPointsPerClass = (numPoints: number, groups: ee.List): ee.List => {
   const groupSummations = ee.List(
-    groups.map((r: ee.UncastDictionary) => {
+    ee.List(groups).map((r: ee.Object) => {
       return ee.Number(ee.Dictionary(r).get('sum'));
     })
   );
 
   const totalArea = ee.Number(groupSummations.reduce('sum'));
 
-  const classPoints = groupSummations.map((v: ee.UncastNumber) => {
+  return groupSummations.map((v: ee.UncastNumber) => {
     return ee
       .Number(v)
       .divide(totalArea)
-      .multiply(numberOfPoints)
+      .multiply(numPoints)
       .round();
   });
+};
 
-  return ee
-    .Image(img)
+export const generateRandomFeatures = (
+  args: IRandomOccurrenceArgs
+): ee.FeatureCollection => {
+  const timeSpan = args.endDate.valueOf() - args.startDate.valueOf();
+
+  const ecoRegionImg = ecoRegionImage();
+
+  const regions = ecoRegionGroups(ecoRegionImg);
+
+  const randomFeatures = ee
+    .Image(ecoRegionImg)
     .addBands(ee.Image.pixelLonLat())
     .stratifiedSample({
       classBand: 'ECO_NUM',
-      classPoints,
-      classValues: labels,
+      classPoints: ee.List(maxPointsPerClass(args.count, regions)),
+      classValues: regions.map((r: ee.Object) => {
+        return ee.Number(ee.Dictionary(r).get('label'));
+      }),
       dropNulls: true,
-      numPoints: numberOfPoints,
+      numPoints: args.count,
       // projection: 'EPSG:4326',
       scale: 500
     })
-    .map((uc: ee.Feature) => {
-      const f = ee.Feature(uc);
-      return ee.Feature(
+    .randomColumn('random');
+
+  return randomFeatures.map((f: ee.Feature) => {
+    f = ee.Feature(f);
+
+    const date = ee
+      .Date(
+        ee
+          .Number(f.get('random'))
+          .multiply(ee.Number(timeSpan))
+          .round()
+          .add(ee.Number(args.startDate.valueOf()))
+      )
+      .update({
+        hour: 12,
+        minute: 0,
+        second: 0
+      });
+
+    f = ee
+      .Feature(
         f.setGeometry(
           ee.Geometry.Point(
             ee.Number(f.get('longitude')),
             ee.Number(f.get('latitude'))
           )
         )
+      )
+      .select(
+        ['latitude', 'longitude', 'ECO_NUM'],
+        ['Latitude', 'Longitude', 'EcoRegionNumber']
       );
-    })
-    .randomColumn('random')
-    .map((uf: ee.UncastFeature) => {
-      const f = ee.Feature(uf);
-      const timestamp = ee
-        .Number(f.get('random'))
-        .multiply(randomTimeSpan)
-        .round()
-        .add(randomTimeStart);
-      const dateMs = ee
-        .Date(timestamp)
-        .update({
-          hour: 12,
-          minute: 0,
-          second: 0
-        })
-        .millis();
-      return f.setMulti({
-        random: null,
-        'system:time_end': dateMs,
-        'system:time_start': dateMs
-      });
+
+    return f.setMulti({
+      random: null,
+      [Labels.Uncertainty]: ee.Number(0),
+      [Labels.Date]: date,
+      [Labels.IntervalStartDate]: date.advance(
+        ee.Number(args.intervalInDays).multiply(-1),
+        'day'
+      )
     });
+  });
 
   //   Map.addLayer(
   //   ee.Image()
@@ -129,30 +147,3 @@ const divisionsNext = (numberOfPoints: number) => {
   //     .randomVisualizer()
   // );
 };
-
-export default function(
-  numberOfPoints: number
-): Promise<GeoJSON.FeatureCollection> {
-  return new Promise((resolve, reject) => {
-    const eeRequest = divisionsNext(numberOfPoints);
-    eeRequest.evaluate((data, err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(data as GeoJSON.FeatureCollection);
-    });
-  });
-}
-
-// var out = divisions_next(500)
-// .aggregate_array('system:time_start')
-
-// out = ee.List(out)
-// .map(function(i) {
-//   return ee.Date(i).format('YYYYMM')
-// })
-
-// out = ee.List(out).sort()
-
-// print(out)

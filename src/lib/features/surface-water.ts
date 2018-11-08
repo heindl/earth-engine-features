@@ -5,19 +5,14 @@ import {
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import {
-  Context,
-  ExampleIDLabel,
-  ExampleTimeLabel,
-  IOccurrenceArgs
-} from './occurrence';
-import { registerEarthEngineCaller } from './query';
+import { Context, Labels } from './occurrence';
+import { IQueryResult, registerEarthEngineCaller } from './query';
 
 const NEAREST_LABEL = 'DistanceToNearest';
 const PERCENTAGE_LABEL = 'CoverageByRadius';
 
 export const SurfaceWaterTypeFields: GraphQLFieldConfigMap<
-  IOccurrenceArgs,
+  IQueryResult,
   Context
 > = {
   [NEAREST_LABEL]: {
@@ -45,7 +40,7 @@ const SurfaceWaterType: GraphQLObjectType = new GraphQLObjectType({
   name: 'SurfaceWater'
 });
 
-const SurfaceWaterFields: GraphQLFieldConfigMap<IOccurrenceArgs, Context> = {
+const SurfaceWaterFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   SurfaceWater: {
     description: SurfaceWaterType.description,
     type: SurfaceWaterType
@@ -132,7 +127,7 @@ const fetchBatch = (
               ee.FeatureCollection(
                 ee.Feature(geom, {
                   buffer: ee.Number(v),
-                  [ExampleIDLabel]: ee.Feature(f).get(ExampleIDLabel)
+                  [Labels.ID]: ee.Feature(f).get(Labels.ID)
                 })
               )
             );
@@ -152,8 +147,8 @@ const fetchBatch = (
 
   const combined = ee.Join.saveAll({ matchesKey: 'joined' }).apply({
     condition: ee.Filter.equals({
-      leftField: ExampleIDLabel,
-      rightField: ExampleIDLabel
+      leftField: Labels.ID,
+      rightField: Labels.ID
     }),
     primary: ee.FeatureCollection(fc),
     secondary: regions
@@ -167,15 +162,15 @@ const compileBatches = (
   r: ee.UncastDictionary
 ): ee.Dictionary => {
   const feature = ee.Feature(f);
-  const startDate = ee.Date(feature.get(ExampleTimeLabel));
+  const date = ee.Date(feature.get(Labels.Date));
   const res = ee.Dictionary(r);
 
   const latestYear = ee
-    .Array([ee.Number(startDate.get('year'))])
+    .Array([ee.Number(date.get('year'))])
     .min([2014])
     .get([0]);
 
-  const upDate = startDate.update({
+  const upDate = date.update({
     day: 15,
     year: ee.Number(latestYear)
   });
@@ -213,34 +208,3 @@ export function resolveSurfaceWater(
 }
 
 registerEarthEngineCaller(SurfaceWaterFields, resolveSurfaceWater);
-
-// var occurrences = ee.FeatureCollection("ft:1P5obit-elnFpwISENVbXDYUiIdQXBZmVKgsvBhfC");
-
-// var features = occurrences
-// .filterDate('2002', '2019')
-// .filterBounds(cutset_geometry)
-// .sort('system:time_start')
-// .limit(10);
-
-// print(fetch(features.toList(features.size())))
-
-// var fc = ee.FeatureCollection([
-//   ee.Feature(
-//     ee.Geometry.Point([-97.8072,30.159573]),
-//     ee.Dictionary({
-//         'system:time_start': ee.Date.fromYMD(2014, 4, 2)
-//     })
-//   )
-// ])
-
-// print(fetch_batch(fc, ee.String('JRC/GSW1_0/MonthlyHistory/2014_04')));
-
-// exports.fetch = function(fc) {
-
-//   // Group features by month
-
-//   fc = ee.FeatureCollection(fc);
-//   return fc.map(function(f){
-//     return fetch(f)
-//   })
-// }

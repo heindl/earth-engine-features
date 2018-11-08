@@ -8,13 +8,8 @@ import {
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import {
-  Context,
-  ExampleIntervalStartTimeLabel,
-  ExampleTimeLabel,
-  IOccurrenceArgs
-} from './occurrence';
-import { registerEarthEngineCaller } from './query';
+import { Context, Labels } from './occurrence';
+import { IQueryResult, registerEarthEngineCaller } from './query';
 
 const ClimateImageName = 'NOAA/CFSV2/FOR6H';
 const GeoPotentialHeightLabel = 'GeopotentialHeight';
@@ -37,10 +32,7 @@ const BANDS = [
   'Geopotential_height_surface' // Order is important!!!
 ];
 
-const ClimateIndexTypeFields: GraphQLFieldConfigMap<
-  IOccurrenceArgs,
-  Context
-> = {
+const ClimateIndexTypeFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   LatentHeatNetFlux: {
     description: `
       Latent heat is the heat moved by water evaporating and
@@ -160,7 +152,7 @@ const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
 
 // tslint:disable:variable-name
 const ClimateIndexFields: {
-  [key: string]: GraphQLFieldConfig<IOccurrenceArgs, object>;
+  [key: string]: GraphQLFieldConfig<IQueryResult, object>;
 } = {
   Climate: {
     description: ClimateIndexType.description,
@@ -184,8 +176,8 @@ function getFeature(feature: ee.Feature): ee.Feature {
     .select(ee.List(BANDS), ee.List(vectorLabels));
 
   feature = ee.Feature(feature);
-  const endDate = ee.Date(feature.get(ExampleTimeLabel));
-  const startDate = ee.Date(feature.get(ExampleIntervalStartTimeLabel));
+  const endDate = ee.Date(feature.get(Labels.Date));
+  const startDate = ee.Date(feature.get(Labels.IntervalStartDate));
 
   const reducedFeatures = ee.FeatureCollection(
     ee

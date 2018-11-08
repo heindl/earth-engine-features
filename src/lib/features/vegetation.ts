@@ -5,13 +5,8 @@ import {
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import {
-  Context,
-  ExampleIntervalStartTimeLabel,
-  ExampleTimeLabel,
-  IOccurrenceArgs
-} from './occurrence';
-import { registerEarthEngineCaller } from './query';
+import { Context, Labels } from './occurrence';
+import { IQueryResult, registerEarthEngineCaller } from './query';
 
 export const VegetationIndicesFields = {
   BlueSurfaceReflectance: {
@@ -49,7 +44,7 @@ const VegetationIndexType: GraphQLObjectType = new GraphQLObjectType({
 
 // tslint:disable:variable-name
 export const VegetationIndexFields: GraphQLFieldConfigMap<
-  IOccurrenceArgs,
+  IQueryResult,
   Context
 > = {
   AquaVegetation: {
@@ -94,8 +89,8 @@ function getFeatureFetchFunction(
 
   return (feature: ee.Feature): ee.Feature => {
     feature = ee.Feature(feature);
-    const endDate = ee.Date(feature.get(ExampleTimeLabel));
-    const startDate = ee.Date(feature.get(ExampleIntervalStartTimeLabel));
+    const endDate = ee.Date(feature.get(Labels.Date));
+    const startDate = ee.Date(feature.get(Labels.IntervalStartDate));
 
     const reducedFeatures = ee.FeatureCollection(
       ee

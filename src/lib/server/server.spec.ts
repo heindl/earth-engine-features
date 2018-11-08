@@ -4,7 +4,10 @@ import server from './server';
 
 const q = {
   query: `{ 
-  Occurrence(latitude: 30.159573, longitude: -97.8072, radius: 1000, date: "2015-05-09") {
+  occurrences(data: [
+    {latitude: 30.159573, longitude: -97.8072, radius: 1000, date: "2015-05-09"}, 
+    {latitude: 38.6998341, longitude: -79.550338, date: "2017-05-09"}
+  ]) {
     Latitude
     Longitude
     Radius
@@ -46,14 +49,14 @@ const q = {
 //   Temperature
 // }
 
-test.cb('fetch graphql', t => {
+test.cb.skip('fetch graphql', t => {
   Supertest(server)
     .post('/')
     .send(q)
     .expect(200)
     .expect((res: Response) => {
       // tslint:disable:no-console
-      console.log(res.body);
+      console.log(JSON.stringify(res.body));
     })
     .end(t.end);
 });

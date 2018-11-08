@@ -1,9 +1,9 @@
 import ee from '@google/earthengine';
 import { GraphQLFieldConfigMap, GraphQLInt, GraphQLObjectType } from 'graphql';
-import { Context, ExampleTimeLabel, IOccurrenceArgs } from './occurrence';
-import { registerEarthEngineCaller } from './query';
+import { Context, Labels } from './occurrence';
+import { IQueryResult, registerEarthEngineCaller } from './query';
 
-const WildfireTypeFields: GraphQLFieldConfigMap<IOccurrenceArgs, Context> = {
+const WildfireTypeFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   DaysSinceLast: {
     description:
       "The number of days since the last wildfire, or -1 if doesn't exist.",
@@ -21,7 +21,7 @@ const WildfireType: GraphQLObjectType = new GraphQLObjectType({
   name: 'Wildfire'
 });
 
-const WildfireFields: GraphQLFieldConfigMap<IOccurrenceArgs, Context> = {
+const WildfireFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   Wildfire: {
     description: WildfireType.description,
     type: WildfireType
@@ -37,7 +37,7 @@ registerEarthEngineCaller(WildfireFields, resolveWildfire);
 const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
   const feature = ee.Feature(uc);
 
-  const date = ee.Date(feature.get(ExampleTimeLabel));
+  const date = ee.Date(feature.get(Labels.Date));
 
   const FIRMS = ee.ImageCollection('FIRMS');
 

@@ -1,8 +1,8 @@
 import ee from '@google/earthengine';
 import { GraphQLFieldConfigMap, GraphQLInt } from 'graphql';
 import GraphQLJSON from 'graphql-type-json';
-import { Context, ExampleIDLabel, IOccurrenceArgs } from './occurrence';
-import { registerEarthEngineCaller } from './query';
+import { Context, Labels } from './occurrence';
+import { IQueryResult, registerEarthEngineCaller } from './query';
 
 const cutsetGeometry = (): ee.Geometry => {
   return ee.Geometry.Rectangle({
@@ -13,7 +13,7 @@ const cutsetGeometry = (): ee.Geometry => {
 
 const LandcoverImage = 'ESA/GLOBCOVER_L4_200901_200912_V2_3';
 
-const LandcoverFields: GraphQLFieldConfigMap<IOccurrenceArgs, Context> = {
+const LandcoverFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   Landcover: {
     description: `The landcover category generated from ${LandcoverImage}.`,
     type: GraphQLJSON
@@ -30,14 +30,17 @@ const fetchLandcover = (fc: ee.FeatureCollection): ee.FeatureCollection => {
       reducer: ee.call('Reducer.frequencyHistogram'),
       scale: 30
     })
-    .select(['histogram', ExampleIDLabel], ['Landcover', ExampleIDLabel]);
+    .select(
+      ['histogram', ...Object.values(Labels)],
+      ['Landcover', ...Object.values(Labels)]
+    );
 };
 
 registerEarthEngineCaller(LandcoverFields, fetchLandcover);
 
 const DigitalElevationModelImage = `CGIAR/SRTM90_V4`;
 
-const ElevationFields: GraphQLFieldConfigMap<IOccurrenceArgs, Context> = {
+const ElevationFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   Aspect: {
     description: `Aspect in degrees calculated from ${DigitalElevationModelImage}.`,
     type: GraphQLInt
