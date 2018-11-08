@@ -60,7 +60,7 @@ const ElevationFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
 };
 
 // TODO: Should mean reduce elevation rather than first. But the others need to be considered more carefully.
-const fetchElevation = (fc: ee.FeatureCollection): ee.FeatureCollection => {
+const fetchTerrain = (fc: ee.FeatureCollection): ee.FeatureCollection => {
   return ee.Terrain.products(
     ee.Image(ee.String(DigitalElevationModelImage)).clip(cutsetGeometry())
   )
@@ -75,4 +75,4 @@ const fetchElevation = (fc: ee.FeatureCollection): ee.FeatureCollection => {
     });
 };
 
-registerEarthEngineCaller(ElevationFields, fetchElevation);
+registerEarthEngineCaller(ElevationFields, fetchTerrain);

@@ -80,7 +80,7 @@ const MODIS_BANDS = [
 function getFeatureFetchFunction(
   fieldLabel: string,
   imageCollectionName: string
-): (feature: ee.Feature) => ee.Feature {
+): (feat: ee.Feature) => ee.Feature {
   const vectorLabels = ee.List(Object.keys(VegetationIndicesFields));
 
   const uic = ee
@@ -118,10 +118,8 @@ function getFeatureFetchFunction(
         );
     }, ee.Dictionary({}));
 
-    return feature.set(
-      ee.Dictionary({
-        [fieldLabel]: properties
-      })
-    );
+    return feature.setMulti({
+      [fieldLabel]: properties
+    });
   };
 }

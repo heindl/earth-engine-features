@@ -12,25 +12,9 @@ import { Context, Labels } from './occurrence';
 import { IQueryResult, registerEarthEngineCaller } from './query';
 
 const ClimateImageName = 'NOAA/CFSV2/FOR6H';
+// Note that GeoPotentialHeight is defined as a top level field,
+// as it is more closely related to elevation.
 const GeoPotentialHeightLabel = 'GeopotentialHeight';
-
-// Note that the order of these bands must match the order of ClimateIndexTypeFields,
-// with GeoPotentialHeightLabel at the end.
-const BANDS = [
-  'Latent_heat_net_flux_surface_6_Hour_Average',
-  'Sensible_heat_net_flux_surface_6_Hour_Average',
-  'Temperature_height_above_ground',
-  'Downward_Short-Wave_Radiation_Flux_surface_6_Hour_Average',
-  'Upward_Short-Wave_Radiation_Flux_surface_6_Hour_Average',
-  'Upward_Long-Wave_Radp_Flux_surface_6_Hour_Average',
-  'Downward_Long-Wave_Radp_Flux_surface_6_Hour_Average',
-  'Specific_humidity_height_above_ground',
-  'Precipitation_rate_surface_6_Hour_Average',
-  'Pressure_surface',
-  'u-component_of_wind_height_above_ground',
-  'v-component_of_wind_height_above_ground',
-  'Geopotential_height_surface' // Order is important!!!
-];
 
 const ClimateIndexTypeFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   LatentHeatNetFlux: {
@@ -134,6 +118,34 @@ const ClimateIndexTypeFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   }
 };
 
+const imgBandMap: { [k: string]: string } = {
+  LatentHeatNetFlux: 'Latent_heat_net_flux_surface_6_Hour_Average',
+  SensibleHeatNetFlux: 'Sensible_heat_net_flux_surface_6_Hour_Average',
+  Temperature: 'Temperature_height_above_ground',
+  DownwardShortWaveRadiationFlux:
+    'Downward_Short-Wave_Radiation_Flux_surface_6_Hour_Average',
+  UpwardShortWaveRadiationFlux:
+    'Upward_Short-Wave_Radiation_Flux_surface_6_Hour_Average',
+  UpwardLongWaveRadiationFlux:
+    'Upward_Long-Wave_Radp_Flux_surface_6_Hour_Average',
+  DownwardLongWaveRadiationFlux:
+    'Downward_Long-Wave_Radp_Flux_surface_6_Hour_Average',
+  Humidity: 'Specific_humidity_height_above_ground',
+  Precipitation: 'Precipitation_rate_surface_6_Hour_Average',
+  Pressure: 'Pressure_surface',
+  UComponentOfWind: 'u-component_of_wind_height_above_ground',
+  VComponentOfWind: 'v-component_of_wind_height_above_ground',
+  [GeoPotentialHeightLabel]: 'Geopotential_height_surface'
+};
+
+const imgVectorLabels = {
+  bands: [
+    ...Object.keys(ClimateIndexTypeFields).map(k => imgBandMap[k]),
+    imgBandMap[GeoPotentialHeightLabel]
+  ],
+  labels: [...Object.keys(ClimateIndexTypeFields), GeoPotentialHeightLabel]
+};
+
 const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
   description: `
   The National Centers for Environmental Prediction (NCEP) Climate Forecast System (CFS)
@@ -168,20 +180,27 @@ const ClimateIndexFields: {
 };
 
 function getFeature(feature: ee.Feature): ee.Feature {
-  const vectorLabels = Object.keys(ClimateIndexTypeFields);
-  vectorLabels.push(GeoPotentialHeightLabel);
 
-  const uic = ee
-    .ImageCollection(ClimateImageName)
-    .select(ee.List(BANDS), ee.List(vectorLabels));
+  // const latitudeDegreeAvgMeters = 111000;
+  // ClimateImageName resolution is 0.2 arc degree.
+  // latitudeDegreeAvgMeters * 0.2 = 22200
 
   feature = ee.Feature(feature);
+
+  // Appears not all areas are covered and this map has a lower resolution, so notch up buffer.
+  feature = ee.Feature(ee.Algorithms.If(
+    ee.Number(feature.get(Labels.Uncertainty)).lt(1000),
+    feature.buffer(1000),
+    feature,
+  ));
+
   const endDate = ee.Date(feature.get(Labels.Date));
   const startDate = ee.Date(feature.get(Labels.IntervalStartDate));
 
   const reducedFeatures = ee.FeatureCollection(
     ee
-      .ImageCollection(uic)
+      .ImageCollection(ClimateImageName)
+      .select(imgVectorLabels.bands, imgVectorLabels.labels)
       .filterDate(startDate, endDate)
       .map(i => {
         return ee.Feature(
@@ -194,23 +213,18 @@ function getFeature(feature: ee.Feature): ee.Feature {
       })
   );
 
-  const properties = ee.List(vectorLabels).iterate((label, current) => {
-    return ee
-      .Dictionary(current)
-      .set(
-        ee.String(label),
-        ee.FeatureCollection(reducedFeatures).aggregate_array(ee.String(label))
-      );
-  }, ee.Dictionary({}));
+  const properties = imgVectorLabels.labels.reduce((obj, label) => {
+    return {
+      ...obj,
+      ...{[label]: ee.FeatureCollection(reducedFeatures).aggregate_array(ee.String(label))}};
+  }, {});
 
-  return feature.set(
-    ee.Dictionary({
-      [GeoPotentialHeightLabel]: ee
-        .FeatureCollection(reducedFeatures)
-        .aggregate_first(GeoPotentialHeightLabel),
-      Climate: ee.Dictionary(properties)
-    })
-  );
+  return feature.setMulti({
+    [GeoPotentialHeightLabel]: ee
+      .FeatureCollection(reducedFeatures)
+      .aggregate_first(GeoPotentialHeightLabel),
+    Climate: ee.Dictionary(properties)
+  });
 }
 
 // TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.

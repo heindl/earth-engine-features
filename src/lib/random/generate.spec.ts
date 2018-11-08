@@ -3,13 +3,15 @@ import test from 'ava';
 import { initialize } from '../utils/initialize';
 import { generateRandomFeatures } from './generate';
 
-const evalFC = async (fc: ee.FeatureCollection)=> {
+const evalFC = async (fc: ee.FeatureCollection) => {
   return new Promise((resolve, reject) => {
     ee.FeatureCollection(fc).evaluate((data, err) => {
       if (err) {
         return reject(err);
       }
-      resolve((data as GeoJSON.FeatureCollection).features.map(f => f.properties));
+      resolve(
+        (data as GeoJSON.FeatureCollection).features.map(f => f.properties)
+      );
     });
   });
 };
@@ -26,8 +28,7 @@ test.skip('get random occurrence points', async t => {
 
   const props = await evalFC(fc);
 
-  t.truthy(props)
-
+  t.truthy(props);
 
   // tslint:disable:no-console
   t.is(30, 30);

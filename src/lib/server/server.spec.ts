@@ -1,55 +1,56 @@
 import test from 'ava';
 import Supertest, { Response } from 'supertest';
 import server from './server';
+//
+// const qMany = `many(data: [
+//   {lat: 30.159573, lng: -97.8072, uncertainty: 1000, date: "2015-05-09"},
+//   {lat: 38.6998341, lng: -79.550338, date: "2017-05-09"}
+// ]) {`;
+
+const qOne = `one(lat: 30.159573, lng: -97.8072, date: "2015-05-09", intervalInDays: 30) {`;
+
+// const fields = `
+//     Latitude
+//     Longitude
+//     CoordinateUncertainty
+//     Elevation
+//     Aspect
+//     Landcover
+//     SurfaceWater{
+//       DistanceToNearest
+//       CoverageByRadius
+//     }
+//     TerraVegetation {
+//       Normalized
+//     }
+//     AquaVegetation {
+//       Normalized
+//     }
+//     Wildfire {
+//       DaysSinceLast
+//     }
+//     Climate {
+//       Temperature
+//       LatentHeatNetFlux
+//     }
+// `
+
+const fields = `
+    Climate {
+      Temperature
+      LatentHeatNetFlux
+    }
+`;
 
 const q = {
   query: `{ 
-  occurrences(data: [
-    {latitude: 30.159573, longitude: -97.8072, radius: 1000, date: "2015-05-09"}, 
-    {latitude: 38.6998341, longitude: -79.550338, date: "2017-05-09"}
-  ]) {
-    Latitude
-    Longitude
-    Radius
-    Date
-    Elevation
-    Landcover
-    Aspect
-    Hillshade
-    GeopotentialHeight
-    SurfaceWater{
-      DistanceToNearest
-      CoverageByRadius
-    }
-    TerraVegetation {
-      Normalized
-    }
-    AquaVegetation {
-      Normalized
-    }
-    Wildfire {
-      DaysSinceLast
-    }
-    Climate {
-      Temperature
-    }
+    ${qOne}
+    ${fields}
   }
 }`
 };
 
-// terrain {
-//   daysSinceLastWildFire
-//   elevation
-//   landcover
-//   distanceToNearestSurfaceWater
-//   surfaceWaterCoverageByRadius
-// }
-
-// Climate {
-//   Temperature
-// }
-
-test.cb.skip('fetch graphql', t => {
+test.cb('fetch graphql', t => {
   Supertest(server)
     .post('/')
     .send(q)

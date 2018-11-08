@@ -102,26 +102,29 @@ export const queryEarthEngine = (
   const reduced = joined.map(f => {
     f = ee.Feature(f);
     const list = ee.List(f.get('matches'));
-    f = f.setMulti({ matches: null });
-
-    return ee.Feature(
-      list.iterate((m, current) => {
-        return ee.Feature(current).copyProperties(ee.Feature(m));
-      }, f)
-    );
+    return ee
+      .Feature(
+        list.iterate((m, previous) => {
+          return ee.Feature(previous).copyProperties(ee.Feature(m));
+        }, f)
+      )
+      .setMulti({ matches: null });
   });
 
+  const res = ee.Algorithms.If(joined.size(), reduced, initialFC);
+
   return new Promise((resolve, reject) => {
-    ee.FeatureCollection(reduced).evaluate((data, err) => {
+    ee.FeatureCollection(res).evaluate((data, err) => {
       if (err) {
         reject(err);
         return;
       }
-      resolve(
-        (data as GeoJSON.FeatureCollection).features
-          .map(f => f.properties as IQueryResult)
-          .filter(notEmpty)
-      );
+      const updated = (data as GeoJSON.FeatureCollection).features
+        .map(f => f.properties as IQueryResult)
+        .filter(notEmpty);
+      // tslint:disable:no-console
+      console.log('raw', JSON.stringify(data));
+      resolve(updated);
     });
   });
 };
@@ -144,10 +147,11 @@ const resolveOne = async (
   info: GraphQLResolveInfo
 ) => {
   const a = args as IOneOccurrenceArgs;
-  return queryEarthEngine(
+  const features = await queryEarthEngine(
     ee.FeatureCollection([new Occurrence(a).toEarthEngineFeature(a)]),
     getEarthEngineCallers(info)
   );
+  return features[0];
 };
 
 const resolveMany = async (

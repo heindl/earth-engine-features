@@ -1,4 +1,5 @@
 // tslint:disable:ban-types variable-name array-type
+
 declare module '@google/earthengine' {
   namespace ee {
     export function call(s: string): Reducer;
@@ -72,6 +73,8 @@ declare module '@google/earthengine' {
       multiply(v: number | Number): Number;
       divide(v: number | Number): Number;
       round(): Number;
+      gt(right: ee.Number | number): Number;
+      lt(right: ee.Number | number): Number;
     }
     export const Number: (v: number | Object) => Number;
 
@@ -143,10 +146,21 @@ declare module '@google/earthengine' {
     ) => List;
 
     export interface Feature extends Object {
+      area(maxError?: number, project?: Projection): Number;
       id(): String;
       // Extract a property from a feature.
       get(s: String | string): Object;
       setGeometry(geometry: Geometry): Object;
+      buffer(
+        // The distance of the buffering, which may be negative.
+        // If no projection is specified, the unit is meters.
+        // Otherwise the unit is in the coordinate system of the projection.
+        distance: number | Number,
+        // The maximum amount of error tolerated when approximating the buffering circle and performing any necessary reprojection. If unspecified, defaults to 1% of the distance.
+        maxError?: number,
+        // If specified, the buffering will be performed in this projection and the distance will be interpreted as units of the coordinate system of this projection. Otherwise the distance is interpereted as meters and the buffering is performed in a spherical coordinate system.
+        proj?: Projection
+      ): Feature;
       copyProperties(
         source: Feature,
         properties?: List, // The properties to copy. If omitted, all ordinary (i.e. non-system) properties are copied.
@@ -331,6 +345,11 @@ declare module '@google/earthengine' {
       map(func: (a: Feature) => Feature): FeatureCollection;
       aggregate_array(property: string | String): Object;
       first(): Feature;
+      reduceColumns(params: {
+        reducer: Reducer;
+        selectors?: List;
+        weightSelectors?: List;
+      }): Dictionary;
       // Select properties from each Feature in a collection. It is also possible to call this function with
       // only string arguments; they will be all be interpreted as propertySelectors (varargs).
       // Returns the feature collection with selected properties.

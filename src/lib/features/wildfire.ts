@@ -6,7 +6,7 @@ import { IQueryResult, registerEarthEngineCaller } from './query';
 const WildfireTypeFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   DaysSinceLast: {
     description:
-      "The number of days since the last wildfire, or -1 if doesn't exist.",
+      'Searches the last 6.5 years worth of Wildfire records and returns the number of days since the last, or -1 if no burn was found.',
     type: GraphQLInt
   }
 };

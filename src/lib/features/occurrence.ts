@@ -93,22 +93,25 @@ export class Occurrence {
   //   };
   // };
 
-  public toEarthEngineFeature = (cfg?: {
+  public toEarthEngineFeature = (cfg: {
     intervalInDays?: number;
   }): ee.Feature => {
-    return ee.Feature(
-      ee.Geometry.Point(this.longitude, this.latitude).buffer(this.uncertainty),
-      {
-        [Labels.ID]: this.id,
-        [Labels.Latitude]: this.latitude,
-        [Labels.Longitude]: this.longitude,
-        [Labels.Uncertainty]: this.uncertainty,
-        [Labels.Date]: this.date.valueOf(), // convert to milliseconds
-        [Labels.IntervalStartDate]:
-          cfg && cfg.intervalInDays
-            ? this.intervalStartTime(cfg.intervalInDays)
-            : this.date.valueOf()
-      }
-    );
+    return ee
+      .Feature(
+        // Buffer feature collection to at least 30, which is the minimum resolution of any dataset.
+        // Terrain products require adjacent cells to make calculations, so may as well make the adjustment here.
+        ee.Geometry.Point(this.longitude, this.latitude),
+        {
+          [Labels.ID]: this.id,
+          [Labels.Latitude]: this.latitude,
+          [Labels.Longitude]: this.longitude,
+          [Labels.Uncertainty]: this.uncertainty,
+          [Labels.Date]: this.date.valueOf(), // convert to milliseconds
+          [Labels.IntervalStartDate]: this.intervalStartTime(
+            Math.max(cfg.intervalInDays || 0, 1)
+          )
+        }
+      )
+      .buffer(ee.Number(Math.max(this.uncertainty, 30)));
   };
 }
