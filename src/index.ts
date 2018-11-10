@@ -1,4 +1,4 @@
-import { geographql } from './lib/server/functions';
+import { geographql } from './lib/server/cloud-functions';
 
 export = {
   geographql

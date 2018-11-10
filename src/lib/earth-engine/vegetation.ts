@@ -1,12 +1,6 @@
 import ee from '@google/earthengine';
-import {
-  GraphQLFieldConfigMap,
-  GraphQLFloat,
-  GraphQLList,
-  GraphQLObjectType
-} from 'graphql';
-import { Context, Labels } from './occurrence';
-import { IQueryResult, registerEarthEngineCaller } from './query';
+import { GraphQLFloat, GraphQLList, GraphQLObjectType } from 'graphql';
+import { Labels } from '../occurrence/occurrence';
 
 export const VegetationIndicesFields = {
   BlueSurfaceReflectance: {
@@ -35,38 +29,25 @@ export const VegetationIndicesFields = {
   }
 };
 
-const VegetationIndexType: GraphQLObjectType = new GraphQLObjectType({
+export const VegetationIndexType: GraphQLObjectType = new GraphQLObjectType({
   description:
     'The MODIS NDVI and EVI products are computed from atmospherically corrected bi-directional surface reflectances that have been masked for water, clouds, heavy aerosols, and cloud shadows.',
   fields: () => VegetationIndicesFields,
   name: 'VegetationIndices'
 });
 
-// tslint:disable:variable-name
-export const VegetationIndexFields: GraphQLFieldConfigMap<
-  IQueryResult,
-  Context
-> = {
-  AquaVegetation: {
-    description: 'MYD13Q1.006 Aqua Vegetation Indices 16-Day Global 250m',
-    type: VegetationIndexType
-  },
-  TerraVegetation: {
-    description: 'MOD13Q1.006 Terra Vegetation Indices 16-Day Global 250m',
-    type: VegetationIndexType
-  }
-};
-
 // TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
-const fetchVegetationIndices = (
+export const fetchAquaVegetationIndices = (
   fc: ee.FeatureCollection
 ): ee.FeatureCollection => {
-  return fc
-    .map(getFeatureFetchFunction('TerraVegetation', 'MODIS/006/MOD13Q1'))
-    .map(getFeatureFetchFunction('AquaVegetation', 'MODIS/006/MYD13Q1'));
+  return fc.map(getFeatureFetchFunction('MODIS/006/MYD13Q1'));
 };
 
-registerEarthEngineCaller(VegetationIndexFields, fetchVegetationIndices);
+export const fetchTerraVegetationIndices = (
+  fc: ee.FeatureCollection
+): ee.FeatureCollection => {
+  return fc.map(getFeatureFetchFunction('MODIS/006/MOD13Q1'));
+};
 
 const MODIS_BANDS = [
   'NDVI',
@@ -78,7 +59,6 @@ const MODIS_BANDS = [
 ];
 
 function getFeatureFetchFunction(
-  fieldLabel: string,
   imageCollectionName: string
 ): (feat: ee.Feature) => ee.Feature {
   const vectorLabels = ee.List(Object.keys(VegetationIndicesFields));
@@ -118,8 +98,6 @@ function getFeatureFetchFunction(
         );
     }, ee.Dictionary({}));
 
-    return feature.setMulti({
-      [fieldLabel]: properties
-    });
+    return feature.setMulti(properties);
   };
 }

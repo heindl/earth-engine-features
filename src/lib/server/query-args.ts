@@ -9,11 +9,11 @@ import {
 } from 'graphql';
 import { GraphQLDate } from 'graphql-iso-date';
 
-interface IBaseArgs {
+interface IBaseQueryArgs {
   intervalInDays: number;
 }
 
-const BaseArgs: GraphQLFieldConfigArgumentMap = {
+const BaseQueryArgs: GraphQLFieldConfigArgumentMap = {
   intervalInDays: {
     defaultValue: 0,
     description:
@@ -22,7 +22,7 @@ const BaseArgs: GraphQLFieldConfigArgumentMap = {
   }
 };
 
-export interface ILocationArgs {
+export interface ILocationQueryArgs {
   lat: number;
   lng: number;
   uncertainty?: number;
@@ -30,7 +30,7 @@ export interface ILocationArgs {
   id?: string;
 }
 
-const LocationArgs: GraphQLFieldConfigArgumentMap = {
+const LocationQueryArgs: GraphQLFieldConfigArgumentMap = {
   date: {
     description: 'The date of the occurrence: YYYY-MM-DD.',
     type: new GraphQLNonNull(GraphQLDate)
@@ -54,25 +54,18 @@ const LocationArgs: GraphQLFieldConfigArgumentMap = {
   }
 };
 
-export interface IOneOccurrenceArgs extends ILocationArgs, IBaseArgs {}
-
-export const OneOccurrenceArgs: GraphQLFieldConfigArgumentMap = {
-  ...BaseArgs,
-  ...LocationArgs
-};
-
-export interface IManyOccurrenceArgs extends IBaseArgs {
-  locations: ILocationArgs[];
+export interface IOccurrenceQueryArgs extends IBaseQueryArgs {
+  locations: ILocationQueryArgs[];
 }
 
-export const ManyOccurrenceArgs: GraphQLFieldConfigArgumentMap = {
-  ...BaseArgs,
+export const OccurrenceQueryArgs: GraphQLFieldConfigArgumentMap = {
+  ...BaseQueryArgs,
   locations: {
     description: 'List of occurrences to fetch',
     type: new GraphQLNonNull(
       new GraphQLList(
         new GraphQLInputObjectType({
-          fields: () => ({ ...LocationArgs }),
+          fields: () => ({ ...LocationQueryArgs }),
           name: 'Location'
         })
       )
@@ -80,32 +73,30 @@ export const ManyOccurrenceArgs: GraphQLFieldConfigArgumentMap = {
   }
 };
 
-const defaultRangeStartDate = (): Date => {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - 1);
-  return d;
-};
-
-export interface IRandomOccurrenceArgs extends IBaseArgs {
+export interface IRandomQueryArgs extends IBaseQueryArgs {
   count: number;
   startDate: Date;
   endDate: Date;
 }
 
-export const RandomOccurrenceArgs: GraphQLFieldConfigArgumentMap = {
-  ...BaseArgs,
+export const RandomQueryArgs: GraphQLFieldConfigArgumentMap = {
+  ...BaseQueryArgs,
   count: {
     defaultValue: 10,
     description: 'The number of random occurrences to generate.',
     type: GraphQLInt
   },
   endDate: {
-    defaultValue: new Date().toDateString(),
+    defaultValue: new Date(),
     description: 'Maximum date of the random range: YYYY-MM-DD',
     type: GraphQLDate
   },
   startDate: {
-    defaultValue: defaultRangeStartDate(),
+    defaultValue: () => {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() - 1);
+      return d;
+    },
     description: 'Minimum date of the random selection range: YYYY-MM-DD',
     type: GraphQLDate
   }

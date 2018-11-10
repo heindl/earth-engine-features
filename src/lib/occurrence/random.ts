@@ -1,6 +1,6 @@
 import ee from '@google/earthengine';
-import { IRandomOccurrenceArgs } from '../features/args';
-import { Labels } from '../features/occurrence';
+import { IRandomQueryArgs } from '../server/query-args';
+import { Labels } from './occurrence';
 
 const boundary = () => {
   const northAmerica = ee.FeatureCollection(
@@ -74,8 +74,11 @@ const maxPointsPerClass = (numPoints: number, groups: ee.List): ee.List => {
 };
 
 export const generateRandomFeatures = (
-  args: IRandomOccurrenceArgs
+  args: IRandomQueryArgs
 ): ee.FeatureCollection => {
+  // tslint:disable:no-console
+  console.log('generating random earth-engine');
+
   const timeSpan = args.endDate.valueOf() - args.startDate.valueOf();
 
   const ecoRegionImg = ecoRegionImage();
@@ -131,7 +134,7 @@ export const generateRandomFeatures = (
 
     return f.setMulti({
       random: null,
-      [Labels.Uncertainty]: ee.Number(0),
+      [Labels.CoordinateUncertainty]: ee.Number(0),
       [Labels.Date]: date,
       [Labels.IntervalStartDate]: date.advance(
         ee.Number(args.intervalInDays).multiply(-1),

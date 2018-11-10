@@ -78,6 +78,7 @@
     "@types/supertest": "^2.0.6",
     "ava": "1.0.0-beta.7",
     "axios": "^0.18.0",
+    "chuhai": "^1.2.0",
     "codecov": "^3.1.0",
     "cors": "^2.8.5",
     "cz-conventional-changelog": "^2.1.0",

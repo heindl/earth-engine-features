@@ -1,5 +1,5 @@
 import express from 'express';
-import { geographql } from './functions';
+import { geographql } from './cloud-functions';
 
 const server = express();
 server.use('/', geographql);

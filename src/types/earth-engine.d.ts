@@ -269,7 +269,7 @@ declare module '@google/earthengine' {
       ): Image;
       clip(geometry: Feature | Geometry | Object): Image;
       reduceRegions(params: {
-        collection: FeatureCollection; // The features to reduce over.
+        collection: FeatureCollection; // The earth-engine to reduce over.
         reducer: Reducer | Object; // The reducer to apply.
         scale?: number | Number; // A nominal scale in meters of the projection to work in.
         crs?: Projection; // The projection to work in. If unspecified, the projection of the image's first band is used. If specified in addition to scale, rescaled to the specified scale.

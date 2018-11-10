@@ -1,9 +1,12 @@
 import ee from '@google/earthengine';
 import { GraphQLFieldConfigMap, GraphQLInt, GraphQLObjectType } from 'graphql';
-import { Context, Labels } from './occurrence';
-import { IQueryResult, registerEarthEngineCaller } from './query';
+import { Labels } from '../occurrence/occurrence';
+import { IEarthEngineContext, IOccurrence } from './resolve';
 
-const WildfireTypeFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
+const WildfireTypeFields: GraphQLFieldConfigMap<
+  IOccurrence,
+  IEarthEngineContext
+> = {
   DaysSinceLast: {
     description:
       'Searches the last 6.5 years worth of Wildfire records and returns the number of days since the last, or -1 if no burn was found.',
@@ -11,7 +14,7 @@ const WildfireTypeFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
   }
 };
 
-const WildfireType: GraphQLObjectType = new GraphQLObjectType({
+export const WildfireType: GraphQLObjectType = new GraphQLObjectType({
   description: `
      The Fire Information for Resource Management System (FIRMS) dataset contains the LANCE fire 
      detection product in rasterized form. The near real-time (NRT) active fire locations are 
@@ -21,18 +24,11 @@ const WildfireType: GraphQLObjectType = new GraphQLObjectType({
   name: 'Wildfire'
 });
 
-const WildfireFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
-  Wildfire: {
-    description: WildfireType.description,
-    type: WildfireType
-  }
-};
-
-function resolveWildfire(fc: ee.FeatureCollection): ee.FeatureCollection {
+export const resolveWildfire = (
+  fc: ee.FeatureCollection
+): ee.FeatureCollection => {
   return ee.FeatureCollection(fc).map(fetchWildfireHistory);
-}
-
-registerEarthEngineCaller(WildfireFields, resolveWildfire);
+};
 
 const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
   const feature = ee.Feature(uc);
@@ -61,22 +57,20 @@ const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
 
   return feature.set(
     ee.Dictionary({
-      [Object.keys(WildfireFields)[0]]: ee.Dictionary({
-        [Object.keys(WildfireTypeFields)[0]]: ee.Algorithms.If(
-          filteredRegions.length(),
-          date.difference(filteredRegions.get(0), 'day'),
-          ee.Number(-1)
-        )
-      })
+      [Object.keys(WildfireTypeFields)[0]]: ee.Algorithms.If(
+        filteredRegions.length(),
+        date.difference(filteredRegions.get(0), 'day'),
+        ee.Number(-1)
+      )
     })
   );
 };
 
-// export const fireRegions = (features: ee.FeatureCollection, startDate: ee.Date, endDate: ee.Date): ee.List<ee.Feature> => {
+// export const fireRegions = (earth-engine: ee.FeatureCollection, startDate: ee.Date, endDate: ee.Date): ee.List<ee.Feature> => {
 //
 //     const FIRMS = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET");
 //
-//     const geometry = features.geometry();
+//     const geometry = earth-engine.geometry();
 //
 //     const imgs = FIRMS
 //         .filterBounds(geometry)
@@ -102,14 +96,14 @@ const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
 //     return c.toList(c.size().add(1))
 // };
 
-// export const parseRegions = (features: ee.FeatureCollection) => {
+// export const parseRegions = (earth-engine: ee.FeatureCollection) => {
 //
 //     var collection_start = ee.Date(
-//         features.aggregate_min('system:time_start')
+//         earth-engine.aggregate_min('system:time_start')
 //     ).advance(-5, 'year');
 //
 //     var collection_end = ee.Date(
-//         features.aggregate_max('system:time_start')
+//         earth-engine.aggregate_max('system:time_start')
 //     );
 //
 //     var collection_difference = ee.Number(
@@ -125,20 +119,20 @@ const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
 //         var start = collection_start.advance(d, 'day');
 //         var end = start.advance(2500, 'day');
 //         return get_features_in_region(
-//             features.filterDate(start, end),
+//             earth-engine.filterDate(start, end),
 //             start,
 //             end
 //         )
 //     }).flatten();
 // }
 //
-// exports.fetch = function(features) {
+// exports.fetch = function(earth-engine) {
 //
-//     features = ee.FeatureCollection(features);
+//     earth-engine = ee.FeatureCollection(earth-engine);
 //
 //     var regions = ee.FeatureCollection(
 //         ee.List(
-//             parse_regions(features)
+//             parse_regions(earth-engine)
 //         )
 //     );
 //
@@ -147,7 +141,7 @@ const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
 //         ordering: 'system:time_start',
 //         ascending: false,
 //     }).apply(
-//         features,
+//         earth-engine,
 //         regions,
 //         ee.Filter.and(
 //             ee.Filter.greaterThan({

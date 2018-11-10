@@ -5,15 +5,15 @@ import {
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import { Context, Labels } from './occurrence';
-import { IQueryResult, registerEarthEngineCaller } from './query';
+import { Labels } from '../occurrence/occurrence';
+import { IEarthEngineContext, IOccurrence } from './resolve';
 
 const NEAREST_LABEL = 'DistanceToNearest';
 const PERCENTAGE_LABEL = 'CoverageByRadius';
 
 export const SurfaceWaterTypeFields: GraphQLFieldConfigMap<
-  IQueryResult,
-  Context
+  IOccurrence,
+  IEarthEngineContext
 > = {
   [NEAREST_LABEL]: {
     // TODO: Set this as a known scale, such as meters.
@@ -28,7 +28,7 @@ export const SurfaceWaterTypeFields: GraphQLFieldConfigMap<
   }
 };
 
-const SurfaceWaterType: GraphQLObjectType = new GraphQLObjectType({
+export const SurfaceWaterType: GraphQLObjectType = new GraphQLObjectType({
   description: `
      JRC Monthly Water History, v1.0
      These data were generated using 3,066,102 scenes from Landsat 5, 7, and 8 acquired between 
@@ -39,13 +39,6 @@ const SurfaceWaterType: GraphQLObjectType = new GraphQLObjectType({
   fields: () => SurfaceWaterTypeFields,
   name: 'SurfaceWater'
 });
-
-const SurfaceWaterFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
-  SurfaceWater: {
-    description: SurfaceWaterType.description,
-    type: SurfaceWaterType
-  }
-};
 
 const getImage = (date: ee.Date, ufc: ee.UncastFeatureCollection): ee.Image => {
   const ic = ee.ImageCollection('JRC/GSW1_0/MonthlyHistory');
@@ -94,15 +87,11 @@ const aggregateAreaStats = (uf: ee.UncastFeature): ee.Feature => {
   const area = ee.List(fc.aggregate_array('area')).slice(1);
   const distance = fc.aggregate_first('distance');
 
-  return feature.setMulti(
-    ee.Dictionary({
-      SurfaceWater: ee.Dictionary({
-        [NEAREST_LABEL]: distance,
-        [PERCENTAGE_LABEL]: ee.Array(waterArea).divide(ee.Array(area))
-      }),
-      joined: null
-    })
-  );
+  return feature.setMulti({
+    [NEAREST_LABEL]: distance,
+    [PERCENTAGE_LABEL]: ee.Array(waterArea).divide(ee.Array(area)),
+    joined: null
+  });
 };
 
 const fetchBatch = (
@@ -206,5 +195,3 @@ export function resolveSurfaceWater(
     );
   return ee.FeatureCollection(data);
 }
-
-registerEarthEngineCaller(SurfaceWaterFields, resolveSurfaceWater);

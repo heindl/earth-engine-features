@@ -1,7 +1,7 @@
 import * as ee from '@google/earthengine';
 import test from 'ava';
-import { initialize } from '../utils/initialize';
-import { generateRandomFeatures } from './generate';
+import { initialize } from '../earth-engine/initialize';
+import { generateRandomFeatures } from './random';
 
 const evalFC = async (fc: ee.FeatureCollection) => {
   return new Promise((resolve, reject) => {
@@ -16,6 +16,8 @@ const evalFC = async (fc: ee.FeatureCollection) => {
   });
 };
 
+// TODO: Test with only one point requested. This broke the build.
+
 test.skip('get random occurrence points', async t => {
   await initialize();
 
@@ -28,15 +30,7 @@ test.skip('get random occurrence points', async t => {
 
   const props = await evalFC(fc);
 
+  t.log(props);
+
   t.truthy(props);
-
-  // tslint:disable:no-console
-  t.is(30, 30);
-
-  //
-
-  // fc.features.forEach((f) => {
-  //   // tslint:disable:no-console
-  //   console.log(JSON.stringify(f))
-  // });
 });

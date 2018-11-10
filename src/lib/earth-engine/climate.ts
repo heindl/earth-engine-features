@@ -2,21 +2,20 @@
 
 import ee from '@google/earthengine';
 import {
-  GraphQLFieldConfig,
   GraphQLFieldConfigMap,
   GraphQLFloat,
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import { Context, Labels } from './occurrence';
-import { IQueryResult, registerEarthEngineCaller } from './query';
+import { Context, Labels } from '../occurrence/occurrence';
+import { IOccurrence } from './resolve';
 
 const ClimateImageName = 'NOAA/CFSV2/FOR6H';
 // Note that GeoPotentialHeight is defined as a top level field,
 // as it is more closely related to elevation.
-const GeoPotentialHeightLabel = 'GeopotentialHeight';
+export const GeoPotentialHeightLabel = 'GeopotentialHeight';
 
-const ClimateIndexTypeFields: GraphQLFieldConfigMap<IQueryResult, Context> = {
+const ClimateIndexTypeFields: GraphQLFieldConfigMap<IOccurrence, Context> = {
   LatentHeatNetFlux: {
     description: `
       Latent heat is the heat moved by water evaporating and
@@ -146,7 +145,7 @@ const imgVectorLabels = {
   labels: [...Object.keys(ClimateIndexTypeFields), GeoPotentialHeightLabel]
 };
 
-const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
+export const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
   description: `
   The National Centers for Environmental Prediction (NCEP) Climate Forecast System (CFS)
    A fully coupled model representing the interaction between the Earth's atmosphere, oceans, land, and sea ice. 
@@ -162,25 +161,13 @@ const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
   name: 'ClimateIndexFields'
 });
 
-// tslint:disable:variable-name
-const ClimateIndexFields: {
-  [key: string]: GraphQLFieldConfig<IQueryResult, object>;
-} = {
-  Climate: {
-    description: ClimateIndexType.description,
-    type: ClimateIndexType
-  },
-  [GeoPotentialHeightLabel]: {
-    description: `A vertical coordinate referenced to Earth's mean sea level, an adjustment
-     to geometric height (elevation above mean sea level) using the variation of gravity with latitude and
-     elevation. Thus, it can be considered a "gravity-adjusted height".
-    `,
-    type: GraphQLFloat
-  }
+// TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
+
+export const fetchClimateData = (fc: ee.FeatureCollection) => {
+  return ee.FeatureCollection(fc).map(getFeature);
 };
 
 function getFeature(feature: ee.Feature): ee.Feature {
-
   // const latitudeDegreeAvgMeters = 111000;
   // ClimateImageName resolution is 0.2 arc degree.
   // latitudeDegreeAvgMeters * 0.2 = 22200
@@ -188,11 +175,13 @@ function getFeature(feature: ee.Feature): ee.Feature {
   feature = ee.Feature(feature);
 
   // Appears not all areas are covered and this map has a lower resolution, so notch up buffer.
-  feature = ee.Feature(ee.Algorithms.If(
-    ee.Number(feature.get(Labels.Uncertainty)).lt(1000),
-    feature.buffer(1000),
-    feature,
-  ));
+  feature = ee.Feature(
+    ee.Algorithms.If(
+      ee.Number(feature.get(Labels.Uncertainty)).lt(2500),
+      feature.buffer(2500),
+      feature
+    )
+  );
 
   const endDate = ee.Date(feature.get(Labels.Date));
   const startDate = ee.Date(feature.get(Labels.IntervalStartDate));
@@ -216,19 +205,17 @@ function getFeature(feature: ee.Feature): ee.Feature {
   const properties = imgVectorLabels.labels.reduce((obj, label) => {
     return {
       ...obj,
-      ...{[label]: ee.FeatureCollection(reducedFeatures).aggregate_array(ee.String(label))}};
+      ...{
+        [label]: reducedFeatures.aggregate_array(ee.String(label))
+      }
+    };
   }, {});
+
+  feature = feature.setMulti(properties);
 
   return feature.setMulti({
     [GeoPotentialHeightLabel]: ee
       .FeatureCollection(reducedFeatures)
-      .aggregate_first(GeoPotentialHeightLabel),
-    Climate: ee.Dictionary(properties)
+      .aggregate_first(GeoPotentialHeightLabel)
   });
 }
-
-// TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
-
-registerEarthEngineCaller(ClimateIndexFields, (fc: ee.FeatureCollection) => {
-  return ee.FeatureCollection(fc).map(getFeature);
-});
