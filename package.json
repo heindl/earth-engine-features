@@ -63,7 +63,9 @@
     "googleapis": "^34.0.0",
     "graphql": "^14.0.2",
     "graphql-iso-date": "^3.6.1",
-    "graphql-type-json": "^0.2.1"
+    "graphql-type-json": "^0.2.1",
+    "io-ts": "^1.4.1",
+    "io-ts-types": "^0.3.14"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",

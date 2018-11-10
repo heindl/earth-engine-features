@@ -2,10 +2,12 @@ import ee from '@google/earthengine';
 import { GraphQLFieldConfigMap, GraphQLInt } from 'graphql';
 import GraphQLJSON from 'graphql-type-json';
 import {
-  getEarthEngineResolveFunction,
+  EarthEngineAggregationFunction,
+  EarthEngineRequestService,
+  EarthEngineResolver,
   IEarthEngineContext,
   IOccurrence
-} from './resolve';
+} from './resolver';
 
 const cutsetGeometry = (): ee.Geometry => {
   return ee.Geometry.Rectangle({
@@ -13,6 +15,20 @@ const cutsetGeometry = (): ee.Geometry => {
     geodesic: false
   });
 };
+
+function getEarthEngineResolveFunction(
+  sectionKey: string,
+  fn: EarthEngineAggregationFunction
+): EarthEngineResolver {
+  // tslint:disable:variable-name
+  return (
+    parent: IOccurrence,
+    _args: any,
+    context: { ee: EarthEngineRequestService }
+  ): object => {
+    return context.ee.resolve(sectionKey, parent.ID, fn);
+  };
+}
 
 const LandcoverImage = 'ESA/GLOBCOVER_L4_200901_200912_V2_3';
 
@@ -43,7 +59,9 @@ export const LandcoverFields: GraphQLFieldConfigMap<
 const DigitalElevationModelImage = `CGIAR/SRTM90_V4`;
 
 // TODO: Should mean reduce elevation rather than first. But the others need to be considered more carefully.
-const fetchTerrain = (fc: ee.FeatureCollection): ee.FeatureCollection => {
+export const fetchTerrain = (
+  fc: ee.FeatureCollection
+): ee.FeatureCollection => {
   return ee.Terrain.products(
     ee.Image(ee.String(DigitalElevationModelImage)).clip(cutsetGeometry())
   )

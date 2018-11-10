@@ -7,15 +7,18 @@ import {
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import { Context, Labels } from '../occurrence/occurrence';
-import { IOccurrence } from './resolve';
+import { LocationLabels } from '../occurrence/occurrence';
+import { IEarthEngineContext, IOccurrence } from './resolver';
 
 const ClimateImageName = 'NOAA/CFSV2/FOR6H';
 // Note that GeoPotentialHeight is defined as a top level field,
 // as it is more closely related to elevation.
 export const GeoPotentialHeightLabel = 'GeopotentialHeight';
 
-const ClimateIndexTypeFields: GraphQLFieldConfigMap<IOccurrence, Context> = {
+const ClimateIndexTypeFields: GraphQLFieldConfigMap<
+  IOccurrence,
+  IEarthEngineContext
+> = {
   LatentHeatNetFlux: {
     description: `
       Latent heat is the heat moved by water evaporating and
@@ -177,14 +180,14 @@ function getFeature(feature: ee.Feature): ee.Feature {
   // Appears not all areas are covered and this map has a lower resolution, so notch up buffer.
   feature = ee.Feature(
     ee.Algorithms.If(
-      ee.Number(feature.get(Labels.Uncertainty)).lt(2500),
+      ee.Number(feature.get(LocationLabels.CoordinateUncertainty)).lt(2500),
       feature.buffer(2500),
       feature
     )
   );
 
-  const endDate = ee.Date(feature.get(Labels.Date));
-  const startDate = ee.Date(feature.get(Labels.IntervalStartDate));
+  const endDate = ee.Date(feature.get(LocationLabels.Date));
+  const startDate = ee.Date(feature.get(LocationLabels.IntervalStartDate));
 
   const reducedFeatures = ee.FeatureCollection(
     ee

@@ -5,10 +5,11 @@ import {
   GeoPotentialHeightLabel
 } from './climate';
 import {
+  EarthEngineAggregationFunction,
   EarthEngineRequestService,
-  getEarthEngineResolveFunction,
+  EarthEngineResolver,
   IOccurrence
-} from './resolve';
+} from './resolver';
 import { resolveSurfaceWater, SurfaceWaterType } from './surface-water';
 import { ElevationFields, LandcoverFields } from './terrain';
 import {
@@ -17,6 +18,20 @@ import {
   VegetationIndexType
 } from './vegetation';
 import { WildfireType } from './wildfire';
+
+function getEarthEngineResolveFunction(
+  sectionKey: string,
+  fn: EarthEngineAggregationFunction
+): EarthEngineResolver {
+  // tslint:disable:variable-name
+  return (
+    parent: IOccurrence,
+    _args: any,
+    context: { ee: EarthEngineRequestService }
+  ): object => {
+    return context.ee.resolve(sectionKey, parent.ID, fn);
+  };
+}
 
 export const EarthEngineFields: GraphQLFieldConfigMap<
   IOccurrence,

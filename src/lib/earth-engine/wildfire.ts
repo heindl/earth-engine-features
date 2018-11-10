@@ -1,7 +1,7 @@
 import ee from '@google/earthengine';
 import { GraphQLFieldConfigMap, GraphQLInt, GraphQLObjectType } from 'graphql';
-import { Labels } from '../occurrence/occurrence';
-import { IEarthEngineContext, IOccurrence } from './resolve';
+import { LocationLabels } from '../occurrence/occurrence';
+import { IEarthEngineContext, IOccurrence } from './resolver';
 
 const WildfireTypeFields: GraphQLFieldConfigMap<
   IOccurrence,
@@ -33,7 +33,7 @@ export const resolveWildfire = (
 const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
   const feature = ee.Feature(uc);
 
-  const date = ee.Date(feature.get(Labels.Date));
+  const date = ee.Date(feature.get(LocationLabels.Date));
 
   const FIRMS = ee.ImageCollection('FIRMS');
 

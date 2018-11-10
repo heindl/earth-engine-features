@@ -1,36 +1,43 @@
-import * as ee from '@google/earthengine';
 import test from 'ava';
 import { initialize } from '../earth-engine/initialize';
-import { generateRandomFeatures } from './random';
-
-const evalFC = async (fc: ee.FeatureCollection) => {
-  return new Promise((resolve, reject) => {
-    ee.FeatureCollection(fc).evaluate((data, err) => {
-      if (err) {
-        return reject(err);
-      }
-      resolve(
-        (data as GeoJSON.FeatureCollection).features.map(f => f.properties)
-      );
-    });
-  });
-};
+import { OccurrenceCollection } from './collections';
 
 // TODO: Test with only one point requested. This broke the build.
 
 test.skip('get random occurrence points', async t => {
   await initialize();
 
-  const fc = generateRandomFeatures({
-    count: 30,
+  const collection = new OccurrenceCollection({
+    count: 20,
     endDate: new Date(2016, 1, 5),
-    intervalInDays: 60,
+    intervalInDays: 30,
     startDate: new Date(2015, 1, 5)
   });
 
-  const props = await evalFC(fc);
+  const locs = await collection.locations;
 
-  t.log(props);
+  // t.log(locs);
 
-  t.truthy(props);
+  t.is(locs.length, 20);
+});
+
+test.skip('get feature collection from known points', async t => {
+  await initialize();
+
+  const collection = new OccurrenceCollection({
+    intervalInDays: 30,
+    locations: [
+      {
+        date: new Date(2015, 3),
+        lat: 33.7676338,
+        lng: -84.5606888
+      }
+    ]
+  });
+
+  const locs = await collection.locations;
+
+  // t.log(locs);
+
+  t.is(locs.length, 1);
 });

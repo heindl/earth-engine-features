@@ -1,6 +1,6 @@
 import ee from '@google/earthengine';
 import { GraphQLFloat, GraphQLList, GraphQLObjectType } from 'graphql';
-import { Labels } from '../occurrence/occurrence';
+import { LocationLabels } from '../occurrence/occurrence';
 
 export const VegetationIndicesFields = {
   BlueSurfaceReflectance: {
@@ -69,8 +69,8 @@ function getFeatureFetchFunction(
 
   return (feature: ee.Feature): ee.Feature => {
     feature = ee.Feature(feature);
-    const endDate = ee.Date(feature.get(Labels.Date));
-    const startDate = ee.Date(feature.get(Labels.IntervalStartDate));
+    const endDate = ee.Date(feature.get(LocationLabels.Date));
+    const startDate = ee.Date(feature.get(LocationLabels.IntervalStartDate));
 
     const reducedFeatures = ee.FeatureCollection(
       ee

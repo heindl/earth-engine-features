@@ -6,10 +6,12 @@ import {
   GraphQLString
 } from 'graphql';
 import { GraphQLDate } from 'graphql-iso-date';
+import * as iots from 'io-ts';
+import { date as iotsDate } from 'io-ts-types';
 import { EarthEngineFields } from '../earth-engine/fields';
 
 // Important that these are the same as the ILocationFields interface.
-export const Labels = {
+export const LocationLabels = {
   CoordinateUncertainty: 'CoordinateUncertainty',
   Date: 'Date',
   ID: 'ID',
@@ -17,6 +19,15 @@ export const Labels = {
   Latitude: 'Latitude',
   Longitude: 'Longitude'
 };
+
+export const Location = iots.type({
+  CoordinateUncertainty: iots.number,
+  Date: iotsDate,
+  ID: iots.string,
+  IntervalStartDate: iotsDate,
+  Latitude: iots.number,
+  Longitude: iots.number
+});
 
 export interface ILocationFields {
   CoordinateUncertainty: number;

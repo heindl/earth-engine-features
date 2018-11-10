@@ -2,10 +2,15 @@ import { GraphQLList, GraphQLObjectType, GraphQLSchema } from 'graphql';
 import {
   EarthEngineRequestService,
   IEarthEngineContext
-} from '../earth-engine/resolve';
+} from '../earth-engine/resolver';
 import { OccurrenceCollection } from '../occurrence/collections';
 import { ILocationFields, OccurrenceType } from '../occurrence/occurrence';
-import { OccurrenceQueryArgs, RandomQueryArgs } from './query-args';
+import {
+  IOccurrenceQueryArgs,
+  IRandomQueryArgs,
+  OccurrenceQueryArgs,
+  RandomQueryArgs
+} from './query-args';
 
 // TODO: Consider this for flattening results:
 // https://github.com/chasingmaxwell/graphql-leveler
@@ -23,7 +28,9 @@ const resolver = async (
   args: { [argName: string]: any },
   context: IEarthEngineContext
 ): Promise<ILocationFields[]> => {
-  const o = new OccurrenceCollection(args);
+  const o = new OccurrenceCollection(args as
+    | IOccurrenceQueryArgs
+    | IRandomQueryArgs);
   context.ee = new EarthEngineRequestService(await o.featureCollection());
   return o.locations;
 };

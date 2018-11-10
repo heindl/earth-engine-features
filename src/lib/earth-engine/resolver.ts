@@ -1,6 +1,6 @@
 import ee from '@google/earthengine';
 import * as GeoJSON from 'geojson';
-import { ILocationFields, Labels } from '../occurrence/occurrence';
+import { ILocationFields, LocationLabels } from '../occurrence/occurrence';
 
 export interface IEarthEngineContext {
   ee: EarthEngineRequestService;
@@ -10,29 +10,29 @@ export interface IOccurrence {
   ID: string;
 }
 
-type EarthEngineResolver = (
+export type EarthEngineResolver = (
   parent: IOccurrence,
   args: { [k: string]: any },
   context: IEarthEngineContext
 ) => object;
 
-type EarthEngineAggregationFunction = (
+export type EarthEngineAggregationFunction = (
   fc: ee.FeatureCollection
 ) => ee.FeatureCollection;
 
-export const getEarthEngineResolveFunction = (
+export function getEarthEngineResolveFunction(
   sectionKey: string,
   fn: EarthEngineAggregationFunction
-): EarthEngineResolver => {
+): EarthEngineResolver {
   // tslint:disable:variable-name
   return (
     parent: IOccurrence,
-    _args,
+    _args: any,
     context: { ee: EarthEngineRequestService }
   ): object => {
     return context.ee.resolve(sectionKey, parent.ID, fn);
   };
-};
+}
 
 export class EarthEngineRequestService {
   protected readonly features: ee.FeatureCollection;
@@ -70,7 +70,9 @@ export class EarthEngineRequestService {
     requester: EarthEngineAggregationFunction
   ): Promise<ILocationFields[]> => {
     return new Promise((resolve, reject) => {
-      const fc = ee.FeatureCollection(requester(this.features)).sort(Labels.ID);
+      const fc = ee
+        .FeatureCollection(requester(this.features))
+        .sort(LocationLabels.ID);
       fc.evaluate((data, err) => {
         if (err) {
           reject(err);
@@ -106,8 +108,8 @@ function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
 //     matchesKey: 'matches'
 //   }).apply({
 //     condition: ee.Filter.equals({
-//       leftField: Labels.ID,
-//       rightField: Labels.ID
+//       leftField: LocationLabels.ID,
+//       rightField: LocationLabels.ID
 //     }),
 //     primary: ee.FeatureCollection(initialFC),
 //     secondary: ee.FeatureCollection(mergedFC)

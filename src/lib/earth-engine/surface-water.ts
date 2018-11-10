@@ -5,8 +5,8 @@ import {
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import { Labels } from '../occurrence/occurrence';
-import { IEarthEngineContext, IOccurrence } from './resolve';
+import { LocationLabels } from '../occurrence/occurrence';
+import { IEarthEngineContext, IOccurrence } from './resolver';
 
 const NEAREST_LABEL = 'DistanceToNearest';
 const PERCENTAGE_LABEL = 'CoverageByRadius';
@@ -116,7 +116,7 @@ const fetchBatch = (
               ee.FeatureCollection(
                 ee.Feature(geom, {
                   buffer: ee.Number(v),
-                  [Labels.ID]: ee.Feature(f).get(Labels.ID)
+                  [LocationLabels.ID]: ee.Feature(f).get(LocationLabels.ID)
                 })
               )
             );
@@ -136,8 +136,8 @@ const fetchBatch = (
 
   const combined = ee.Join.saveAll({ matchesKey: 'joined' }).apply({
     condition: ee.Filter.equals({
-      leftField: Labels.ID,
-      rightField: Labels.ID
+      leftField: LocationLabels.ID,
+      rightField: LocationLabels.ID
     }),
     primary: ee.FeatureCollection(fc),
     secondary: regions
@@ -151,7 +151,7 @@ const compileBatches = (
   r: ee.UncastDictionary
 ): ee.Dictionary => {
   const feature = ee.Feature(f);
-  const date = ee.Date(feature.get(Labels.Date));
+  const date = ee.Date(feature.get(LocationLabels.Date));
   const res = ee.Dictionary(r);
 
   const latestYear = ee
