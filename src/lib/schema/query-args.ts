@@ -15,7 +15,7 @@ interface IBaseQueryArgs {
 
 const BaseQueryArgs: GraphQLFieldConfigArgumentMap = {
   intervalInDays: {
-    defaultValue: 0,
+    defaultValue: 1,
     description:
       'The time period to aggregate results in days, starting at the date of the occurrence and doing backward',
     type: GraphQLInt
@@ -92,11 +92,11 @@ export const RandomQueryArgs: GraphQLFieldConfigArgumentMap = {
     type: GraphQLDate
   },
   startDate: {
-    defaultValue: () => {
+    defaultValue: (() => {
       const d = new Date();
       d.setFullYear(d.getFullYear() - 1);
       return d;
-    },
+    })(),
     description: 'Minimum date of the random selection range: YYYY-MM-DD',
     type: GraphQLDate
   }

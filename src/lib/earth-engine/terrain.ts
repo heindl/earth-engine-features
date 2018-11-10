@@ -2,12 +2,10 @@ import ee from '@google/earthengine';
 import { GraphQLFieldConfigMap, GraphQLInt } from 'graphql';
 import GraphQLJSON from 'graphql-type-json';
 import {
-  EarthEngineAggregationFunction,
-  EarthEngineRequestService,
-  EarthEngineResolver,
+  getResolveFieldFunction,
   IEarthEngineContext,
   IOccurrence
-} from './resolver';
+} from './types';
 
 const cutsetGeometry = (): ee.Geometry => {
   return ee.Geometry.Rectangle({
@@ -16,33 +14,20 @@ const cutsetGeometry = (): ee.Geometry => {
   });
 };
 
-function getEarthEngineResolveFunction(
-  sectionKey: string,
-  fn: EarthEngineAggregationFunction
-): EarthEngineResolver {
-  // tslint:disable:variable-name
-  return (
-    parent: IOccurrence,
-    _args: any,
-    context: { ee: EarthEngineRequestService }
-  ): object => {
-    return context.ee.resolve(sectionKey, parent.ID, fn);
-  };
-}
-
 const LandcoverImage = 'ESA/GLOBCOVER_L4_200901_200912_V2_3';
 
 // TODO: Consider converting the landcover to a key value pair to be more inline with GraphQL style.
-const fetchLandcover = (fc: ee.FeatureCollection): ee.FeatureCollection => {
+export const resolveLandcover = (
+  fc: ee.FeatureCollection
+): ee.FeatureCollection => {
   return ee
     .Image(LandcoverImage)
     .select('landcover')
     .reduceRegions({
       collection: ee.FeatureCollection(fc),
-      reducer: ee.call('Reducer.frequencyHistogram'),
+      reducer: ee.call('Reducer.frequencyHistogram').setOutputs(['Landcover']),
       scale: 30
-    })
-    .select(['histogram'], ['Landcover']);
+    });
 };
 
 export const LandcoverFields: GraphQLFieldConfigMap<
@@ -51,7 +36,11 @@ export const LandcoverFields: GraphQLFieldConfigMap<
 > = {
   Landcover: {
     description: `The landcover category generated from ${LandcoverImage}.`,
-    resolve: getEarthEngineResolveFunction('Landcover', fetchLandcover),
+    resolve: getResolveFieldFunction(
+      'Landcover',
+      resolveLandcover,
+      'Landcover'
+    ),
     type: GraphQLJSON
   }
 };
@@ -59,7 +48,7 @@ export const LandcoverFields: GraphQLFieldConfigMap<
 const DigitalElevationModelImage = `CGIAR/SRTM90_V4`;
 
 // TODO: Should mean reduce elevation rather than first. But the others need to be considered more carefully.
-export const fetchTerrain = (
+export const resolveTerrain = (
   fc: ee.FeatureCollection
 ): ee.FeatureCollection => {
   return ee.Terrain.products(
@@ -82,22 +71,22 @@ export const ElevationFields: GraphQLFieldConfigMap<
 > = {
   Aspect: {
     description: `Aspect in degrees calculated from ${DigitalElevationModelImage}.`,
-    resolve: getEarthEngineResolveFunction('Terrain', fetchTerrain),
+    resolve: getResolveFieldFunction('Terrain', resolveTerrain, 'Aspect'),
     type: GraphQLInt
   },
   Elevation: {
     description: `Elevation in meters from ${DigitalElevationModelImage}.`,
-    resolve: getEarthEngineResolveFunction('Terrain', fetchTerrain),
+    resolve: getResolveFieldFunction('Terrain', resolveTerrain, 'Elevation'),
     type: GraphQLInt
   },
   Hillshade: {
     description: `Simple hillshade from ${DigitalElevationModelImage}.`,
-    resolve: getEarthEngineResolveFunction('Terrain', fetchTerrain),
+    resolve: getResolveFieldFunction('Terrain', resolveTerrain, 'Hillshade'),
     type: GraphQLInt
   },
   Slope: {
     description: `Slope in degrees from ${DigitalElevationModelImage}.`,
-    resolve: getEarthEngineResolveFunction('Terrain', fetchTerrain),
+    resolve: getResolveFieldFunction('Terrain', resolveTerrain, 'Slope'),
     type: GraphQLInt
   }
 };

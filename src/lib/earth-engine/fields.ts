@@ -1,60 +1,46 @@
 import { GraphQLFieldConfigMap, GraphQLFloat } from 'graphql';
 import {
   ClimateIndexType,
-  fetchClimateData,
-  GeoPotentialHeightLabel
+  GeoPotentialHeightLabel,
+  resolveClimateData
 } from './climate';
-import {
-  EarthEngineAggregationFunction,
-  EarthEngineRequestService,
-  EarthEngineResolver,
-  IOccurrence
-} from './resolver';
 import { resolveSurfaceWater, SurfaceWaterType } from './surface-water';
 import { ElevationFields, LandcoverFields } from './terrain';
 import {
-  fetchAquaVegetationIndices,
-  fetchTerraVegetationIndices,
+  getResolveFieldFunction,
+  getResolveSourceFunction,
+  IEarthEngineContext,
+  IOccurrence
+} from './types';
+import {
+  resolveAquaVegetationIndices,
+  resolveTerraVegetationIndices,
   VegetationIndexType
 } from './vegetation';
-import { WildfireType } from './wildfire';
-
-function getEarthEngineResolveFunction(
-  sectionKey: string,
-  fn: EarthEngineAggregationFunction
-): EarthEngineResolver {
-  // tslint:disable:variable-name
-  return (
-    parent: IOccurrence,
-    _args: any,
-    context: { ee: EarthEngineRequestService }
-  ): object => {
-    return context.ee.resolve(sectionKey, parent.ID, fn);
-  };
-}
+import { resolveWildfire, WildfireType } from './wildfire';
 
 export const EarthEngineFields: GraphQLFieldConfigMap<
   IOccurrence,
-  { ee: EarthEngineRequestService }
+  IEarthEngineContext
 > = {
   ...LandcoverFields,
   ...ElevationFields,
   AquaVegetation: {
     description: 'MYD13Q1.006 Aqua Vegetation Indices 16-Day Global 250m',
-    resolve: getEarthEngineResolveFunction(
+    resolve: getResolveSourceFunction(
       'AquaVegetation',
-      fetchAquaVegetationIndices
+      resolveAquaVegetationIndices
     ),
     type: VegetationIndexType
   },
   Climate: {
     description: ClimateIndexType.description,
-    resolve: getEarthEngineResolveFunction('Climate', fetchClimateData),
+    resolve: getResolveSourceFunction('Climate', resolveClimateData),
     type: ClimateIndexType
   },
   SurfaceWater: {
     description: SurfaceWaterType.description,
-    resolve: getEarthEngineResolveFunction('SurfaceWater', resolveSurfaceWater),
+    resolve: getResolveSourceFunction('SurfaceWater', resolveSurfaceWater),
     type: SurfaceWaterType
   },
   [GeoPotentialHeightLabel]: {
@@ -62,19 +48,24 @@ export const EarthEngineFields: GraphQLFieldConfigMap<
      to geometric height (elevation above mean sea level) using the variation of gravity with latitude and
      elevation. Thus, it can be considered a "gravity-adjusted height".
     `,
-    resolve: getEarthEngineResolveFunction('Climate', fetchClimateData),
+    resolve: getResolveFieldFunction(
+      'Climate',
+      resolveClimateData,
+      GeoPotentialHeightLabel
+    ),
     type: GraphQLFloat
   },
   TerraVegetation: {
     description: 'MOD13Q1.006 Terra Vegetation Indices 16-Day Global 250m',
-    resolve: getEarthEngineResolveFunction(
+    resolve: getResolveSourceFunction(
       'TerraVegetation',
-      fetchTerraVegetationIndices
+      resolveTerraVegetationIndices
     ),
     type: VegetationIndexType
   },
   Wildfire: {
     description: WildfireType.description,
+    resolve: getResolveSourceFunction('Wildfire', resolveWildfire),
     type: WildfireType
   }
 };

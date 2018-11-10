@@ -1,66 +1,69 @@
 import ee from '@google/earthengine';
 import * as GeoJSON from 'geojson';
-import { ILocationFields, LocationLabels } from '../occurrence/occurrence';
-
-export interface IEarthEngineContext {
-  ee: EarthEngineRequestService;
-}
-
-export interface IOccurrence {
-  ID: string;
-}
-
-export type EarthEngineResolver = (
-  parent: IOccurrence,
-  args: { [k: string]: any },
-  context: IEarthEngineContext
-) => object;
-
-export type EarthEngineAggregationFunction = (
-  fc: ee.FeatureCollection
-) => ee.FeatureCollection;
-
-export function getEarthEngineResolveFunction(
-  sectionKey: string,
-  fn: EarthEngineAggregationFunction
-): EarthEngineResolver {
-  // tslint:disable:variable-name
-  return (
-    parent: IOccurrence,
-    _args: any,
-    context: { ee: EarthEngineRequestService }
-  ): object => {
-    return context.ee.resolve(sectionKey, parent.ID, fn);
-  };
-}
+import { LocationLabels } from '../occurrences/location';
+import {
+  AllowedFieldTypes,
+  EarthEngineAggregationFunction,
+  IRequestResponse,
+  IResolveFieldParams,
+  IResolveSourceParams
+} from './types';
 
 export class EarthEngineRequestService {
+  protected aggregationRequestCount = 0;
+
   protected readonly features: ee.FeatureCollection;
-  protected requests: Map<string, Promise<ILocationFields[]>> = new Map();
+  protected requests: Map<string, Promise<IRequestResponse[]>> = new Map();
 
   constructor(features: ee.FeatureCollection) {
-    this.features = features;
+    this.features = ee.FeatureCollection(features);
   }
 
-  public resolve = async (
-    sectionKey: string,
-    occurrenceID: string,
-    requester: EarthEngineAggregationFunction
-  ): Promise<ILocationFields> => {
-    if (!this.requests.has(sectionKey)) {
-      this.requests.set(sectionKey, this.initiateRequestPromise(requester));
+  public requestCount = async (): Promise<number> => {
+    await Promise.all(this.requests);
+    return this.aggregationRequestCount;
+  };
+
+  public resolveField = async (
+    params: IResolveFieldParams
+  ): Promise<AllowedFieldTypes> => {
+    const source = await this.resolveSource(params);
+    if (!(params.fieldName in source)) {
+      throw new Error(
+        `field name [${params.fieldName}] not found in occurrence [${
+          params.occurrenceID
+        }] data for section [${params.sourceName}]`
+      );
     }
-    const promise = this.requests.get(sectionKey);
+    return source[params.fieldName];
+  };
+
+  public resolveSource = async (
+    params: IResolveSourceParams
+  ): Promise<IRequestResponse> => {
+    if (!this.requests.has(params.sourceName)) {
+      this.requests.set(
+        params.sourceName,
+        this.initiateRequestPromise(params.aggregator)
+      );
+    }
+    const promise = this.requests.get(params.sourceName);
     if (!promise) {
       throw new Error(
-        `earth engine feature promise not found for section [${sectionKey}]`
+        `earth engine feature promise not found for section [${
+          params.sourceName
+        }]`
       );
     }
     const occurrences = await promise;
-    const matches = occurrences.filter(o => o.ID === occurrenceID);
+    const matches: IRequestResponse[] = occurrences.filter(
+      o => o.ID === params.occurrenceID
+    );
     if (matches.length !== 1) {
       throw new Error(
-        `properties not found for occurrence [${occurrenceID}] and section [${sectionKey}]`
+        `properties not found for occurrence [${
+          params.occurrenceID
+        }] and section [${params.sourceName}]`
       );
     }
     return matches[0];
@@ -68,18 +71,19 @@ export class EarthEngineRequestService {
 
   public initiateRequestPromise = (
     requester: EarthEngineAggregationFunction
-  ): Promise<ILocationFields[]> => {
+  ): Promise<IRequestResponse[]> => {
     return new Promise((resolve, reject) => {
       const fc = ee
         .FeatureCollection(requester(this.features))
         .sort(LocationLabels.ID);
       fc.evaluate((data, err) => {
+        this.aggregationRequestCount += 1;
         if (err) {
           reject(err);
           return;
         }
         const properties = (data as GeoJSON.FeatureCollection).features
-          .map(f => f.properties as ILocationFields)
+          .map(f => f.properties as IRequestResponse)
           .filter(notEmpty);
         resolve(properties);
       });

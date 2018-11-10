@@ -5,8 +5,8 @@ import {
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import { LocationLabels } from '../occurrence/occurrence';
-import { IEarthEngineContext, IOccurrence } from './resolver';
+import { LocationLabels } from '../occurrences/location';
+import { IEarthEngineContext, IOccurrence } from './types';
 
 const NEAREST_LABEL = 'DistanceToNearest';
 const PERCENTAGE_LABEL = 'CoverageByRadius';

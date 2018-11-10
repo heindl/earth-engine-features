@@ -1,6 +1,6 @@
 import ee from '@google/earthengine';
-import { IRandomQueryArgs } from '../server/query-args';
-import { LocationLabels } from './occurrence';
+import { IRandomQueryArgs } from '../schema/query-args';
+import { LocationLabels } from './location';
 
 const boundary = () => {
   const northAmerica = ee.FeatureCollection(
@@ -73,10 +73,10 @@ const maxPointsPerClass = (numPoints: number, groups: ee.List): ee.List => {
   });
 };
 
-export const generateRandomFeatures = (
-  args: IRandomQueryArgs
-): ee.FeatureCollection => {
-  args.count = args.count + 1;
+export const generateRandomFeatures = (args: IRandomQueryArgs): ee.List => {
+  // Lower count requests are not returning correctly, I suspect as a result of the way eco-regions are
+  // stratified and in some cases null values are dropped. To correct, increase the total number and slice at the end.
+  const numPoints = Math.max(args.count + 1, 10);
 
   const timeSpan = args.endDate.valueOf() - args.startDate.valueOf();
 
@@ -89,18 +89,18 @@ export const generateRandomFeatures = (
     .addBands(ee.Image.pixelLonLat())
     .stratifiedSample({
       classBand: 'ECO_NUM',
-      classPoints: ee.List(maxPointsPerClass(args.count, regions)),
+      classPoints: ee.List(maxPointsPerClass(numPoints, regions)),
       classValues: regions.map((r: ee.Object) => {
         return ee.Number(ee.Dictionary(r).get('label'));
       }),
       dropNulls: true,
-      numPoints: args.count,
+      numPoints,
       // projection: 'EPSG:4326',
       scale: 500
     })
     .randomColumn('random');
 
-  return randomFeatures.map((f: ee.Feature) => {
+  const mappedFC = randomFeatures.map((f: ee.Feature) => {
     f = ee.Feature(f);
 
     const date = ee
@@ -140,6 +140,8 @@ export const generateRandomFeatures = (
         .millis()
     });
   });
+
+  return mappedFC.toList(ee.Number(args.count));
 
   //   Map.addLayer(
   //   ee.Image()

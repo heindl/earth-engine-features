@@ -1,9 +1,9 @@
 {
   "extends": "./tsconfig",
   "compilerOptions": {
-    "target": "es2017",
+    "target": "esnext",
     "outDir": "build/module",
-    "module": "commonjs"
+    "module": "esnext"
   },
   "exclude": [
     "node_modules/**"

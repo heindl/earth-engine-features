@@ -1,6 +1,6 @@
 import ee from '@google/earthengine';
 import { GraphQLFloat, GraphQLList, GraphQLObjectType } from 'graphql';
-import { LocationLabels } from '../occurrence/occurrence';
+import { LocationLabels } from '../occurrences/location';
 
 export const VegetationIndicesFields = {
   BlueSurfaceReflectance: {
@@ -37,13 +37,13 @@ export const VegetationIndexType: GraphQLObjectType = new GraphQLObjectType({
 });
 
 // TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
-export const fetchAquaVegetationIndices = (
+export const resolveAquaVegetationIndices = (
   fc: ee.FeatureCollection
 ): ee.FeatureCollection => {
   return fc.map(getFeatureFetchFunction('MODIS/006/MYD13Q1'));
 };
 
-export const fetchTerraVegetationIndices = (
+export const resolveTerraVegetationIndices = (
   fc: ee.FeatureCollection
 ): ee.FeatureCollection => {
   return fc.map(getFeatureFetchFunction('MODIS/006/MOD13Q1'));

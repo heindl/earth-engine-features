@@ -1,5 +1,1 @@
-import { geographql } from './lib/server/cloud-functions';
-
-export = {
-  geographql
-};
+import {} from './lib/server/cloud-functions';

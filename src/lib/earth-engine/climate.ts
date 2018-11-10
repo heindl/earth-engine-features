@@ -7,8 +7,8 @@ import {
   GraphQLList,
   GraphQLObjectType
 } from 'graphql';
-import { LocationLabels } from '../occurrence/occurrence';
-import { IEarthEngineContext, IOccurrence } from './resolver';
+import { LocationLabels } from '../occurrences/location';
+import { IEarthEngineContext, IOccurrence } from './types';
 
 const ClimateImageName = 'NOAA/CFSV2/FOR6H';
 // Note that GeoPotentialHeight is defined as a top level field,
@@ -166,7 +166,7 @@ export const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
 
 // TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
 
-export const fetchClimateData = (fc: ee.FeatureCollection) => {
+export const resolveClimateData = (fc: ee.FeatureCollection) => {
   return ee.FeatureCollection(fc).map(getFeature);
 };
 

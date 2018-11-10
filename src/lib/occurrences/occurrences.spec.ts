@@ -2,23 +2,22 @@ import test from 'ava';
 import { initialize } from '../earth-engine/initialize';
 import { OccurrenceCollection } from './collections';
 
-// TODO: Test with only one point requested. This broke the build.
-
 test.skip('get random occurrence points', async t => {
   await initialize();
 
-  const collection = new OccurrenceCollection({
-    count: 20,
+  const params = {
     endDate: new Date(2016, 1, 5),
     intervalInDays: 30,
     startDate: new Date(2015, 1, 5)
-  });
+  };
 
-  const locs = await collection.locations;
-
-  // t.log(locs);
-
-  t.is(locs.length, 20);
+  await Promise.all(
+    [1, 2, 5, 10, 15, 20].map(async (i: number) => {
+      const collection = new OccurrenceCollection({ ...params, count: i });
+      const locs = await collection.locations;
+      t.is(locs.length, i);
+    })
+  );
 });
 
 test.skip('get feature collection from known points', async t => {

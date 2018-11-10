@@ -1,14 +1,7 @@
-import {
-  GraphQLFloat,
-  GraphQLInt,
-  GraphQLObjectType,
-  GraphQLObjectTypeConfig,
-  GraphQLString
-} from 'graphql';
+import { GraphQLFloat, GraphQLInt, GraphQLString } from 'graphql';
 import { GraphQLDate } from 'graphql-iso-date';
 import * as iots from 'io-ts';
 import { date as iotsDate } from 'io-ts-types';
-import { EarthEngineFields } from '../earth-engine/fields';
 
 // Important that these are the same as the ILocationFields interface.
 export const LocationLabels = {
@@ -64,15 +57,3 @@ export const LocationFields = {
     type: GraphQLFloat
   }
 };
-
-// TODO: Update the Context type to be stricter in handing earth engine. Avoiding for now because will like be broken dependency.
-const OccurrenceTypeConfig: GraphQLObjectTypeConfig<any, any> = {
-  description: 'Features related to the terrain of the occurrence coordinates.',
-  fields: {
-    ...EarthEngineFields,
-    ...LocationFields
-  },
-  name: 'Occurrence'
-};
-
-export const OccurrenceType = new GraphQLObjectType(OccurrenceTypeConfig);

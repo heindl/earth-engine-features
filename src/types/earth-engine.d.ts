@@ -181,6 +181,7 @@ declare module '@google/earthengine' {
     export const Feature: (v: Object, props?: Object | object) => Feature;
 
     export interface Reducer extends Object {
+      setOutputs(outputs: string[] | ee.List): Reducer;
       unweighted(): Reducer;
       group(params: { groupField: number; groupName: string }): Object;
     }

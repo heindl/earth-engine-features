@@ -3,9 +3,10 @@ import * as crypto from 'crypto';
 import * as GeoJSON from 'geojson';
 // tslint:disable:no-submodule-imports
 import { ThrowReporter } from 'io-ts/lib/ThrowReporter';
-import { IOccurrenceQueryArgs, IRandomQueryArgs } from '../server/query-args';
+import { IOccurrenceQueryArgs, IRandomQueryArgs } from '../schema/query-args';
 import { normalizeCoordinates } from '../utils/geo';
-import { ILocationFields, Location } from './occurrence';
+import { logger } from '../utils/logger';
+import { ILocationFields, Location } from './location';
 import { generateRandomFeatures } from './random';
 
 const intervalStartTime = (date: Date, intervalDaysBefore: number): Date => {
@@ -21,6 +22,11 @@ export class OccurrenceCollection {
   public readonly locations: Promise<ILocationFields[]>;
 
   constructor(args: IRandomQueryArgs | IOccurrenceQueryArgs) {
+    logger.log({
+      context: args,
+      level: 'info',
+      message: `generating occurrence collection`
+    });
     this.locations = !(args as IOccurrenceQueryArgs).locations
       ? this.constructLocationsFromRandom(args as IRandomQueryArgs)
       : this.constructLocationsFromArgs(args as IOccurrenceQueryArgs);
@@ -49,26 +55,29 @@ export class OccurrenceCollection {
   ): Promise<ILocationFields[]> => {
     const locs: ILocationFields[] = await new Promise<ILocationFields[]>(
       (resolve, reject) => {
-        return ee
-          .FeatureCollection(generateRandomFeatures(args))
-          .evaluate((data, err) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-            const properties = (data as GeoJSON.FeatureCollection).features
-              .map(f => {
-                const props = f.properties as ILocationFields;
-                props.ID = props.ID || crypto.randomBytes(10).toString('hex');
-                props.Date = new Date(props.Date);
-                props.IntervalStartDate = new Date(props.IntervalStartDate);
-                return props;
-              })
-              .filter(notEmpty);
-            resolve(properties);
-          });
+        return ee.List(generateRandomFeatures(args)).evaluate((data, err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          const properties = (data as GeoJSON.Feature[])
+            .map(f => {
+              const props = f.properties as ILocationFields;
+              props.ID = props.ID || crypto.randomBytes(10).toString('hex');
+              props.Date = new Date(props.Date);
+              props.IntervalStartDate = new Date(props.IntervalStartDate);
+              return props;
+            })
+            .filter(notEmpty);
+          resolve(properties);
+        });
       }
     );
+    logger.log({
+      context: { count: locs.length },
+      level: 'info',
+      message: `random occurrences generated`
+    });
     // validate here, because unsure about the PathReporter output.
     locs.forEach(l => ThrowReporter.report(Location.decode(l)));
     return locs;
