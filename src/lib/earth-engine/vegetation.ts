@@ -2,6 +2,11 @@ import ee from '@google/earthengine';
 import { GraphQLFloat, GraphQLList, GraphQLObjectType } from 'graphql';
 import { LocationLabels } from '../occurrences/location';
 
+// TODO: These satellites have a rich history, so would be better to learn more about them.
+// http://blogs.discovermagazine.com/imageo/2018/06/10/nearly-two-decades-revealing-satellite-images-now-available-fingertips/
+// https://worldview.earthdata.nasa.gov/?p=geographic&l=VIIRS_SNPP_CorrectedReflectance_TrueColor(hidden),MODIS_Aqua_CorrectedReflectance_TrueColor(hidden),MODIS_Terra_CorrectedReflectance_TrueColor,Reference_Labels(hidden),Reference_Features(hidden),Coastlines&t=2018-11-10-T00%3A00%3A00Z&z=3&v=-182.7970727229513,-50.22621689744125,-18.61071129642241,54.87196263374375
+// Would be a good post to write to learn more and call some of the original engineers.
+
 export const VegetationIndicesFields = {
   BlueSurfaceReflectance: {
     description: 'Blue surface reflectance',

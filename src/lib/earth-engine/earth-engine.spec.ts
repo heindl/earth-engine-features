@@ -31,7 +31,7 @@ function gatherResolvers(
   );
 }
 
-test('test earth engine resolver', async t => {
+test.skip('test earth engine resolver', async t => {
   await initialize();
 
   const eeFeatures = ee.FeatureCollection(
