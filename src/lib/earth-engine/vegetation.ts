@@ -41,17 +41,20 @@ export const VegetationIndexType: GraphQLObjectType = new GraphQLObjectType({
   name: 'VegetationIndices'
 });
 
+export const AquaVegetationImageCollectionName = 'MODIS/006/MYD13Q1';
+export const TerraVegetationImageCollectionName = 'MODIS/006/MOD13Q1';
+
 // TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
 export const resolveAquaVegetationIndices = (
   fc: ee.FeatureCollection
 ): ee.FeatureCollection => {
-  return fc.map(getFeatureFetchFunction('MODIS/006/MYD13Q1'));
+  return fc.map(getFeatureFetchFunction(AquaVegetationImageCollectionName));
 };
 
 export const resolveTerraVegetationIndices = (
   fc: ee.FeatureCollection
 ): ee.FeatureCollection => {
-  return fc.map(getFeatureFetchFunction('MODIS/006/MOD13Q1'));
+  return fc.map(getFeatureFetchFunction(TerraVegetationImageCollectionName));
 };
 
 const MODIS_BANDS = [

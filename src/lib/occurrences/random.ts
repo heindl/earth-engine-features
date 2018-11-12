@@ -73,10 +73,12 @@ const maxPointsPerClass = (numPoints: number, groups: ee.List): ee.List => {
   });
 };
 
-export const generateRandomFeatures = (args: IRandomQueryArgs): ee.List => {
+export const generateRandomFeatures = async (
+  args: IRandomQueryArgs
+): Promise<ee.List> => {
   // Lower count requests are not returning correctly, I suspect as a result of the way eco-regions are
   // stratified and in some cases null values are dropped. To correct, increase the total number and slice at the end.
-  const numPoints = Math.max(args.count + 1, 10);
+  const numPoints = args.count + 10;
 
   const timeSpan = args.endDate.valueOf() - args.startDate.valueOf();
 

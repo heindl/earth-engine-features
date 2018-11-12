@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 let hasInitialized = false;
-export const initialize = async () => {
+export const initializeEarthEngine = async () => {
   if (hasInitialized) {
     return;
   }

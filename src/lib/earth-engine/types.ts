@@ -17,9 +17,11 @@ export interface IRequestResponse extends ILocationFields {
 }
 
 export interface IResolveSourceParams {
-  sourceName: string;
-  occurrenceID: string;
-  aggregator: EarthEngineAggregationFunction;
+  featureResolver: EarthEngineAggregationFunction;
+  sourceStart?: number;
+  sourceEnd?: number;
+  occurrenceID?: string;
+  sourceLabel: string;
 }
 
 export interface IResolveFieldParams extends IResolveSourceParams {
@@ -48,39 +50,27 @@ export type EarthEngineResolver = (
 ) => Promise<IRequestResponse | AllowedFieldTypes>;
 
 export function getResolveFieldFunction(
-  sourceName: string,
-  aggregator: EarthEngineAggregationFunction,
-  fieldName: string
+  args: IResolveFieldParams
 ): EarthEngineResolver {
-  // tslint:disable:variable-name
   return (
     occurrence: IOccurrence,
+    // tslint:disable:variable-name
     _args: any,
     context: IEarthEngineContext
   ): Promise<AllowedFieldTypes> => {
-    return context.ee.resolveField({
-      aggregator,
-      fieldName,
-      occurrenceID: occurrence.ID,
-      sourceName
-    });
+    return context.ee.resolveField({ ...args, occurrenceID: occurrence.ID });
   };
 }
 
 export function getResolveSourceFunction(
-  sourceName: string,
-  aggregator: EarthEngineAggregationFunction
+  args: IResolveSourceParams
 ): EarthEngineResolver {
-  // tslint:disable:variable-name
   return (
     occurrence: IOccurrence,
+    // tslint:disable:variable-name
     _args: any,
     context: IEarthEngineContext
   ): Promise<IRequestResponse> => {
-    return context.ee.resolveSource({
-      aggregator,
-      occurrenceID: occurrence.ID,
-      sourceName
-    });
+    return context.ee.resolveSource({ ...args, occurrenceID: occurrence.ID });
   };
 }

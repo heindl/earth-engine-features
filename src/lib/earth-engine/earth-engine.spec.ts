@@ -1,19 +1,20 @@
-import * as ee from '@google/earthengine';
 import test from 'ava';
 import { GraphQLFieldConfigMap } from 'graphql';
 import { TestLocations } from '../__testdata__/locations';
 import { TestExpectedData } from '../__testdata__/response';
-import { EarthEngineFields } from './fields';
-import { initialize } from './initialize';
-import { EarthEngineRequestService } from './resolver';
+import {
+  EarthEngineFields,
+  getImageCollectionAvailableDateRanges
+} from './fields';
+import { EarthEngineRequestService } from './request-service';
 import { EarthEngineResolver, IEarthEngineContext, IOccurrence } from './types';
 
 interface IResolverDictionary {
   [key: string]: EarthEngineResolver;
 }
 
-function gatherResolvers(
-  fieldConfigMap?: GraphQLFieldConfigMap<IOccurrence, IEarthEngineContext>
+function resolverMapFromFields(
+  fieldConfigMap: GraphQLFieldConfigMap<IOccurrence, IEarthEngineContext>
 ): IResolverDictionary {
   const res: IResolverDictionary = {};
   if (!fieldConfigMap) {
@@ -31,21 +32,32 @@ function gatherResolvers(
   );
 }
 
+test('test earth engine image data', async t => {
+  const data = await getImageCollectionAvailableDateRanges('MODIS/006/MYD13Q1');
+  t.is(data['MODIS/006/MYD13Q1'][0], 950832000000);
+});
+
+test('test single earth engine resolver', async t => {
+  const eeService = new EarthEngineRequestService(TestLocations);
+
+  const fields = await EarthEngineFields();
+
+  const resolvers = resolverMapFromFields(fields);
+
+  const data = await resolvers.Climate({ ID: 'a' }, {}, { ee: eeService });
+
+  t.log(data);
+
+  t.is(await eeService.requestCount(), 1);
+});
+
 test.skip('test earth engine resolver', async t => {
-  await initialize();
+  const eeService = new EarthEngineRequestService(TestLocations);
 
-  const eeFeatures = ee.FeatureCollection(
-    TestLocations.map(loc => {
-      return ee.Feature(ee.Geometry.Point(loc.Longitude, loc.Latitude), loc);
-    })
-  );
-
-  const eeService = new EarthEngineRequestService(eeFeatures);
-
-  const resolvers = gatherResolvers(EarthEngineFields);
+  const resolvers = resolverMapFromFields(await EarthEngineFields());
 
   const promises: Array<Promise<any>> = [];
-  ['a', 'b'].forEach((id: string) => {
+  ['a'].forEach((id: string) => {
     const expectedOutput = TestExpectedData[id] as { [key: string]: any };
     delete expectedOutput.ID;
     promises.push(

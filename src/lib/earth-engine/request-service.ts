@@ -1,6 +1,15 @@
 import ee from '@google/earthengine';
 import * as GeoJSON from 'geojson';
-import { LocationLabels } from '../occurrences/location';
+// tslint:disable:no-submodule-imports
+import { ThrowReporter } from 'io-ts/lib/ThrowReporter';
+import moment from 'moment';
+import { TestLocations } from '../__testdata__/locations';
+import {
+  ILocationFields,
+  Location,
+  LocationLabels
+} from '../occurrences/location';
+import { initializeEarthEngine } from './initialize';
 import {
   AllowedFieldTypes,
   EarthEngineAggregationFunction,
@@ -9,14 +18,57 @@ import {
   IResolveSourceParams
 } from './types';
 
+class LocationCollection {
+  public readonly minTime: number;
+  public readonly maxTime: number;
+  protected readonly locations: ILocationFields[];
+
+  constructor(locations: ILocationFields[]) {
+    this.locations = locations.sort((a, b) => {
+      return a.ID < b.ID ? -1 : 1;
+    });
+
+    this.validate();
+
+    this.minTime = locations.reduce(
+      (min, b) => Math.min(min, b.IntervalStartDate),
+      locations[0].IntervalStartDate
+    );
+
+    this.maxTime = locations.reduce(
+      (max, b) => Math.max(max, b.Date),
+      locations[0].Date
+    );
+  }
+
+  public featureCollection = () => {
+    return ee.FeatureCollection(
+      TestLocations.map(loc => {
+        return ee.Feature(ee.Geometry.Point(loc.Longitude, loc.Latitude), loc);
+      })
+    );
+  };
+
+  protected validate = () => {
+    if (this.locations.length > 50) {
+      throw new Error(
+        'For now, only 50 locations are currently allowed per request'
+      );
+    }
+
+    this.locations.forEach(loc => ThrowReporter.report(Location.decode(loc)));
+  };
+}
+
+// tslint:disable:max-classes-per-file
 export class EarthEngineRequestService {
   protected aggregationRequestCount = 0;
 
-  protected readonly features: ee.FeatureCollection;
   protected requests: Map<string, Promise<IRequestResponse[]>> = new Map();
+  protected readonly locations: LocationCollection;
 
-  constructor(features: ee.FeatureCollection) {
-    this.features = ee.FeatureCollection(features);
+  constructor(locations: ILocationFields[]) {
+    this.locations = new LocationCollection(locations);
   }
 
   public requestCount = async (): Promise<number> => {
@@ -32,7 +84,7 @@ export class EarthEngineRequestService {
       throw new Error(
         `field name [${params.fieldName}] not found in occurrence [${
           params.occurrenceID
-        }] data for section [${params.sourceName}]`
+        }] data for section [${params.sourceLabel}]`
       );
     }
     return source[params.fieldName];
@@ -41,17 +93,19 @@ export class EarthEngineRequestService {
   public resolveSource = async (
     params: IResolveSourceParams
   ): Promise<IRequestResponse> => {
-    if (!this.requests.has(params.sourceName)) {
+    this.validateDateRange(params);
+
+    if (!this.requests.has(params.sourceLabel)) {
       this.requests.set(
-        params.sourceName,
-        this.initiateRequestPromise(params.aggregator)
+        params.sourceLabel,
+        this.initiateRequestPromise(params.featureResolver)
       );
     }
-    const promise = this.requests.get(params.sourceName);
+    const promise = this.requests.get(params.sourceLabel);
     if (!promise) {
       throw new Error(
         `earth engine feature promise not found for section [${
-          params.sourceName
+          params.sourceLabel
         }]`
       );
     }
@@ -63,20 +117,44 @@ export class EarthEngineRequestService {
       throw new Error(
         `properties not found for occurrence [${
           params.occurrenceID
-        }] and section [${params.sourceName}]`
+        }] and section [${params.sourceLabel}]`
       );
     }
     return matches[0];
   };
 
-  public initiateRequestPromise = (
-    requester: EarthEngineAggregationFunction
+  protected validateDateRange = (params: IResolveSourceParams) => {
+    if (params.sourceStart && params.sourceStart > this.locations.minTime) {
+      throw new Error(
+        `occurrences [${moment(this.locations.minTime).format(
+          'YYYY-MM-DD'
+        )}] fall out of data range [${params.sourceLabel}, ${moment(
+          params.sourceStart
+        ).format('YYYY-MM-DD')}]`
+      );
+    }
+
+    if (params.sourceEnd && params.sourceEnd < this.locations.maxTime) {
+      throw new Error(
+        `occurrences [${moment(this.locations.maxTime).format(
+          'YYYY-MM-DD'
+        )}] fall out of data range [${params.sourceLabel}, ${moment(
+          params.sourceEnd
+        ).format('YYYY-MM-DD')}]`
+      );
+    }
+  };
+
+  protected initiateRequestPromise = async (
+    resolveFeatures: EarthEngineAggregationFunction
   ): Promise<IRequestResponse[]> => {
-    return new Promise((resolve, reject) => {
-      const fc = ee
-        .FeatureCollection(requester(this.features))
-        .sort(LocationLabels.ID);
-      fc.evaluate((data, err) => {
+    await initializeEarthEngine();
+
+    const fc = this.locations.featureCollection();
+    const resolved = resolveFeatures(fc).sort(LocationLabels.ID);
+
+    return new Promise<IRequestResponse[]>((resolve, reject) => {
+      resolved.evaluate((data, err) => {
         this.aggregationRequestCount += 1;
         if (err) {
           reject(err);

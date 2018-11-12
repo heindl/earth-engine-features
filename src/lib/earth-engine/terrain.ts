@@ -36,11 +36,11 @@ export const LandcoverFields: GraphQLFieldConfigMap<
 > = {
   Landcover: {
     description: `The landcover category generated from ${LandcoverImage}.`,
-    resolve: getResolveFieldFunction(
-      'Landcover',
-      resolveLandcover,
-      'Landcover'
-    ),
+    resolve: getResolveFieldFunction({
+      featureResolver: resolveLandcover,
+      fieldName: 'Landcover',
+      sourceLabel: 'Landcover'
+    }),
     type: GraphQLJSON
   }
 };
@@ -71,22 +71,38 @@ export const ElevationFields: GraphQLFieldConfigMap<
 > = {
   Aspect: {
     description: `Aspect in degrees calculated from ${DigitalElevationModelImage}.`,
-    resolve: getResolveFieldFunction('Terrain', resolveTerrain, 'Aspect'),
+    resolve: getResolveFieldFunction({
+      featureResolver: resolveTerrain,
+      fieldName: 'Aspect',
+      sourceLabel: 'Terrain'
+    }),
     type: GraphQLInt
   },
   Elevation: {
     description: `Elevation in meters from ${DigitalElevationModelImage}.`,
-    resolve: getResolveFieldFunction('Terrain', resolveTerrain, 'Elevation'),
+    resolve: getResolveFieldFunction({
+      featureResolver: resolveTerrain,
+      fieldName: 'Elevation',
+      sourceLabel: 'Terrain'
+    }),
     type: GraphQLInt
   },
   Hillshade: {
     description: `Simple hillshade from ${DigitalElevationModelImage}.`,
-    resolve: getResolveFieldFunction('Terrain', resolveTerrain, 'Hillshade'),
+    resolve: getResolveFieldFunction({
+      featureResolver: resolveTerrain,
+      fieldName: 'Hillshade',
+      sourceLabel: 'Terrain'
+    }),
     type: GraphQLInt
   },
   Slope: {
     description: `Slope in degrees from ${DigitalElevationModelImage}.`,
-    resolve: getResolveFieldFunction('Terrain', resolveTerrain, 'Slope'),
+    resolve: getResolveFieldFunction({
+      featureResolver: resolveTerrain,
+      fieldName: 'Slope',
+      sourceLabel: 'Terrain'
+    }),
     type: GraphQLInt
   }
 };

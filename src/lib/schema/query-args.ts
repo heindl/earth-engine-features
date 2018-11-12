@@ -26,7 +26,7 @@ export interface ILocationQueryArgs {
   lat: number;
   lng: number;
   uncertainty?: number;
-  date: Date;
+  date: number;
   id?: string;
 }
 

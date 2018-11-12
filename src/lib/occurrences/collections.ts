@@ -9,9 +9,12 @@ import { logger } from '../utils/logger';
 import { ILocationFields, Location } from './location';
 import { generateRandomFeatures } from './random';
 
-const intervalStartTime = (date: Date, intervalDaysBefore: number): Date => {
+const intervalStartTime = (
+  date: number,
+  intervalDaysBefore: number
+): number => {
   const inMilliseconds = intervalDaysBefore * 86400 * 1000;
-  return new Date(date.valueOf() - inMilliseconds);
+  return date.valueOf() - inMilliseconds;
 };
 
 function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
@@ -53,9 +56,11 @@ export class OccurrenceCollection {
   protected constructLocationsFromRandom = async (
     args: IRandomQueryArgs
   ): Promise<ILocationFields[]> => {
+    const fc = await generateRandomFeatures(args);
+
     const locs: ILocationFields[] = await new Promise<ILocationFields[]>(
       (resolve, reject) => {
-        return ee.List(generateRandomFeatures(args)).evaluate((data, err) => {
+        return ee.List(fc).evaluate((data, err) => {
           if (err) {
             reject(err);
             return;
@@ -64,8 +69,6 @@ export class OccurrenceCollection {
             .map(f => {
               const props = f.properties as ILocationFields;
               props.ID = props.ID || crypto.randomBytes(10).toString('hex');
-              props.Date = new Date(props.Date);
-              props.IntervalStartDate = new Date(props.IntervalStartDate);
               return props;
             })
             .filter(notEmpty);

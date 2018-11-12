@@ -5,7 +5,7 @@ import {
   GraphQLSchema
 } from 'graphql';
 import { EarthEngineFields } from '../earth-engine/fields';
-import { EarthEngineRequestService } from '../earth-engine/resolver';
+import { EarthEngineRequestService } from '../earth-engine/request-service';
 import { IEarthEngineContext } from '../earth-engine/types';
 import { OccurrenceCollection } from '../occurrences/collections';
 import { ILocationFields, LocationFields } from '../occurrences/location';
@@ -48,13 +48,13 @@ const resolver = async (
   const o = new OccurrenceCollection(args as
     | IOccurrenceQueryArgs
     | IRandomQueryArgs);
-  const features = await o.featureCollection();
+  const locations = await o.locations;
   logger.log({
-    context: { count: (await o.locations).length },
+    context: { count: locations.length },
     level: 'info',
     message: `resolving locations`
   });
-  context.ee = new EarthEngineRequestService(features);
+  context.ee = new EarthEngineRequestService(locations);
   return o.locations;
 };
 

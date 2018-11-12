@@ -4,7 +4,8 @@ import server from './server';
 
 const RandomCount = 50;
 
-const q = {query: `{
+const q = {
+  query: `{
         random(count: ${RandomCount} intervalInDays: 15){
           ID
           Elevation
@@ -50,9 +51,10 @@ const q = {query: `{
           }
         }
       }
-    `};
+    `
+};
 
-test.cb('fetch graphql', t => {
+test.cb.skip('fetch graphql', t => {
   Supertest(server)
     .post('/')
     .send(q)

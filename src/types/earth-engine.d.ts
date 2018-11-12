@@ -5,12 +5,7 @@ declare module '@google/earthengine' {
     export function call(s: string): Reducer;
 
     export interface Object {
-      evaluate(
-        callback: (
-          success: object | GeoJSON.FeatureCollection,
-          failure: Error
-        ) => void
-      ): void;
+      evaluate(callback: (success: any, failure: Error) => void): void;
     }
 
     export type UncastFeatureCollection = Object;
@@ -289,6 +284,7 @@ declare module '@google/earthengine' {
       filterBounds(geometry: Feature | Geometry): ImageCollection;
       sort(s: string | String): ImageCollection;
 
+      getInfo(cb: (data: any, err: Error) => void): void;
       filter(filter: ee.Filter): ImageCollection;
       aggregate_array(property: string | String): Object;
       reduceToImage(params: {

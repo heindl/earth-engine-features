@@ -4,12 +4,12 @@ import { graphql } from 'graphql';
 import { PathReporter } from 'io-ts/lib/PathReporter';
 import { locationsGraphQLString } from '../__testdata__/locations';
 import { TestExpectedData } from '../__testdata__/response';
-import { initialize } from '../earth-engine/initialize';
+import { initializeEarthEngine } from '../earth-engine/initialize';
 import { ILocationFields, Location } from '../occurrences/location';
 import { OccurrenceQuerySchema } from './schema';
 
 test.skip('random graphql query', async t => {
-  await initialize();
+  await initializeEarthEngine();
 
   const q = `
       query {
@@ -36,10 +36,6 @@ test.skip('random graphql query', async t => {
   }
 
   res.data.random.forEach((loc: ILocationFields & { Elevation: number }) => {
-    // TODO: Refactor this to be consistent. GraphQL out is a string but in other places I'm expecting a date object.
-    loc.Date = new Date(loc.Date.toString());
-    loc.IntervalStartDate = new Date(loc.Date.toString());
-
     const report = PathReporter.report(Location.decode(loc));
     if (report.length > 0 && report[0] !== 'No errors!') {
       return t.fail(report[0]);
@@ -50,7 +46,7 @@ test.skip('random graphql query', async t => {
 });
 
 test.skip('schema integration with known points', async t => {
-  await initialize();
+  await initializeEarthEngine();
 
   t.log(locationsGraphQLString());
 

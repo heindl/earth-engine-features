@@ -1,7 +1,7 @@
 import test from 'ava';
 import suite from 'chuhai';
 import { graphql } from 'graphql';
-import { initialize } from '../earth-engine/initialize';
+import { initializeEarthEngine } from '../earth-engine/initialize';
 import { OccurrenceQuerySchema } from '../schema/schema';
 
 interface Runner {
@@ -80,7 +80,7 @@ const assertions = [
 const RandomCount = 20;
 
 test.skip('earth engine EarthEngineResolver benchmarks', async t => {
-  await initialize();
+  await initializeEarthEngine();
 
   await suite('earth engine resolvers', s => {
     // s.set('minSamples', 5);

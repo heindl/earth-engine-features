@@ -30,12 +30,14 @@ export const resolveWildfire = (
   return ee.FeatureCollection(fc).map(fetchWildfireHistory);
 };
 
+export const WildfireImageCollection = 'FIRMS';
+
 const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
   const feature = ee.Feature(uc);
 
   const date = ee.Date(feature.get(LocationLabels.Date));
 
-  const FIRMS = ee.ImageCollection('FIRMS');
+  const FIRMS = ee.ImageCollection(WildfireImageCollection);
 
   const imgs = FIRMS.filterDate(
     // TODO: Include this value as an arg.

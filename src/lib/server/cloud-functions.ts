@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import graphqlHTTP from 'express-graphql';
-import { initialize } from '../earth-engine/initialize';
+import { initializeEarthEngine } from '../earth-engine/initialize';
 import { OccurrenceQuerySchema } from '../schema/schema';
 
 // TODO: Consider using the apollo engine for middleware, which automatically handles caching.
@@ -23,6 +23,6 @@ export const geographql = async (req: Request, res: Response) => {
     'Access-Control-Allow-Headers',
     'Origin, X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept'
   );
-  await initialize();
+  await initializeEarthEngine();
   return graphqlMiddleware(req, res);
 };

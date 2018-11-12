@@ -10,7 +10,7 @@ import {
 import { LocationLabels } from '../occurrences/location';
 import { IEarthEngineContext, IOccurrence } from './types';
 
-const ClimateImageName = 'NOAA/CFSV2/FOR6H';
+export const ClimateImageCollectionName = 'NOAA/CFSV2/FOR6H';
 // Note that GeoPotentialHeight is defined as a top level field,
 // as it is more closely related to elevation.
 export const GeoPotentialHeightLabel = 'GeopotentialHeight';
@@ -167,12 +167,45 @@ export const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
 // TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
 
 export const resolveClimateData = (fc: ee.FeatureCollection) => {
-  return ee.FeatureCollection(fc).map(getFeature);
+  return ee.FeatureCollection(fc).map(resolveClimateFeature);
 };
 
-function getFeature(feature: ee.Feature): ee.Feature {
+// This method does not work if the time range is too wide or
+// the region to reduce is too large. Individual reduce is safer, though slower.
+
+// const resolveClimateFromImageCollection = (
+//   feature: ee.Feature
+// ): ee.List => {
+//   feature = ee.Feature(feature);
+//   const ic = ee
+//     .ImageCollection('NOAA/CFSV2/FOR6H')
+//     .filterDate(
+//       ee.Date(feature.get(LocationLabels.IntervalStartDate)),
+//       ee.Date(feature.get(LocationLabels.Date))
+//     )
+//     .select(['Temperature_height_above_ground'], ['Temperature']);
+//
+//   const regions = ic.getRegion({
+//     geometry: feature.geometry(),
+//     scale: 30
+//   });
+//
+//   return regions
+
+// var labels = ee.List(regions.get(0)).slice(3);
+// labels = labels.set(0, 'time_start');
+// return regions.slice(1).map(function(r){
+//     r = ee.List(r);
+//     return ee.Feature(
+//         ee.Geometry.Point([r.get(1), r.get(2)]),
+//         ee.Dictionary.fromLists(labels, r.slice(3))
+//     )
+// });
+// };
+
+export function resolveClimateFeature(feature: ee.Feature): ee.Feature {
   // const latitudeDegreeAvgMeters = 111000;
-  // ClimateImageName resolution is 0.2 arc degree.
+  // ClimateImageCollectionName resolution is 0.2 arc degree.
   // latitudeDegreeAvgMeters * 0.2 = 22200
 
   feature = ee.Feature(feature);
@@ -191,7 +224,7 @@ function getFeature(feature: ee.Feature): ee.Feature {
 
   const reducedFeatures = ee.FeatureCollection(
     ee
-      .ImageCollection(ClimateImageName)
+      .ImageCollection(ClimateImageCollectionName)
       .select(imgVectorLabels.bands, imgVectorLabels.labels)
       .filterDate(startDate, endDate)
       .map(i => {
