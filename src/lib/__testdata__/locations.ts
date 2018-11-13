@@ -1,4 +1,4 @@
-import { ILocationFields } from '../occurrences/location';
+import { ILocationFields, LocationCollection } from '../occurrences/location';
 
 const daysBefore = 10;
 
@@ -25,6 +25,10 @@ export const TestLocations: ILocationFields[] = locations.map(loc => {
     IntervalStartDate: loc.Date - 86400 * 1000 * daysBefore
   };
 });
+
+export const TestLocationsCollection: LocationCollection = new LocationCollection(
+  TestLocations
+);
 
 export const locationsGraphQLString = () => {
   return (

@@ -4,12 +4,10 @@ import { graphql } from 'graphql';
 import { PathReporter } from 'io-ts/lib/PathReporter';
 import { locationsGraphQLString } from '../__testdata__/locations';
 import { TestExpectedData } from '../__testdata__/response';
-import { initializeEarthEngine } from '../earth-engine/initialize';
 import { ILocationFields, Location } from '../occurrences/location';
 import { OccurrenceQuerySchema } from './schema';
 
-test.skip('random graphql query', async t => {
-  await initializeEarthEngine();
+test('random graphql query', async t => {
 
   const q = `
       query {
@@ -45,8 +43,7 @@ test.skip('random graphql query', async t => {
   t.is(res.data.random.length, 5);
 });
 
-test.skip('schema integration with known points', async t => {
-  await initializeEarthEngine();
+test('schema integration with known points', async t => {
 
   t.log(locationsGraphQLString());
 

@@ -2,12 +2,14 @@ import test from 'ava';
 import { GraphQLFieldConfigMap } from 'graphql';
 import { TestLocations } from '../__testdata__/locations';
 import { TestExpectedData } from '../__testdata__/response';
+import { GeoPotentialHeightLabel } from './climate';
+import { EarthEngineFields } from './fields';
 import {
-  EarthEngineFields,
-  getImageCollectionAvailableDateRanges
-} from './fields';
-import { EarthEngineRequestService } from './request-service';
-import { EarthEngineResolver, IEarthEngineContext, IOccurrence } from './types';
+  EarthEngineResolver,
+  IEarthEngineContext,
+  IOccurrence, IRequestResponse
+} from './resolve';
+import { EarthEngineRequestService } from './service';
 
 interface IResolverDictionary {
   [key: string]: EarthEngineResolver;
@@ -32,21 +34,16 @@ function resolverMapFromFields(
   );
 }
 
-test('test earth engine image data', async t => {
-  const data = await getImageCollectionAvailableDateRanges('MODIS/006/MYD13Q1');
-  t.is(data['MODIS/006/MYD13Q1'][0], 950832000000);
-});
-
-test('test single earth engine resolver', async t => {
+test.skip('test single earth engine resolver', async t => {
   const eeService = new EarthEngineRequestService(TestLocations);
 
-  const fields = await EarthEngineFields();
+  const resolvers = resolverMapFromFields(EarthEngineFields);
 
-  const resolvers = resolverMapFromFields(fields);
+  const a = (await resolvers.Climate({ ID: 'a' }, {}, { ee: eeService })) as IRequestResponse
 
-  const data = await resolvers.Climate({ ID: 'a' }, {}, { ee: eeService });
-
-  t.log(data);
+  t.is(a.ID, 'a');
+  t.truthy(a[GeoPotentialHeightLabel]);
+  t.is(a[GeoPotentialHeightLabel], 887.0079956054688);
 
   t.is(await eeService.requestCount(), 1);
 });
@@ -54,10 +51,10 @@ test('test single earth engine resolver', async t => {
 test.skip('test earth engine resolver', async t => {
   const eeService = new EarthEngineRequestService(TestLocations);
 
-  const resolvers = resolverMapFromFields(await EarthEngineFields());
+  const resolvers = resolverMapFromFields(EarthEngineFields);
 
   const promises: Array<Promise<any>> = [];
-  ['a'].forEach((id: string) => {
+  ['a', 'b'].forEach((id: string) => {
     const expectedOutput = TestExpectedData[id] as { [key: string]: any };
     delete expectedOutput.ID;
     promises.push(

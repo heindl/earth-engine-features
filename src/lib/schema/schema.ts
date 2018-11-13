@@ -5,8 +5,8 @@ import {
   GraphQLSchema
 } from 'graphql';
 import { EarthEngineFields } from '../earth-engine/fields';
-import { EarthEngineRequestService } from '../earth-engine/request-service';
-import { IEarthEngineContext } from '../earth-engine/types';
+import { EarthEngineRequestService } from '../earth-engine/service';
+import { IEarthEngineContext } from '../earth-engine/resolve';
 import { OccurrenceCollection } from '../occurrences/collections';
 import { ILocationFields, LocationFields } from '../occurrences/location';
 import { logger } from '../utils/logger';

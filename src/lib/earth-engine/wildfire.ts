@@ -1,7 +1,12 @@
 import ee from '@google/earthengine';
 import { GraphQLFieldConfigMap, GraphQLInt, GraphQLObjectType } from 'graphql';
 import { LocationLabels } from '../occurrences/location';
-import { IEarthEngineContext, IOccurrence } from './types';
+import {
+  getResolveFunction,
+  IEarthEngineContext,
+  IOccurrence
+} from './resolve';
+import { EarthEngineSource, fetchImageCollectionDateRange } from './source';
 
 const WildfireTypeFields: GraphQLFieldConfigMap<
   IOccurrence,
@@ -14,7 +19,7 @@ const WildfireTypeFields: GraphQLFieldConfigMap<
   }
 };
 
-export const WildfireType: GraphQLObjectType = new GraphQLObjectType({
+const WildfireType: GraphQLObjectType = new GraphQLObjectType({
   description: `
      The Fire Information for Resource Management System (FIRMS) dataset contains the LANCE fire 
      detection product in rasterized form. The near real-time (NRT) active fire locations are 
@@ -24,13 +29,26 @@ export const WildfireType: GraphQLObjectType = new GraphQLObjectType({
   name: 'Wildfire'
 });
 
-export const resolveWildfire = (
-  fc: ee.FeatureCollection
-): ee.FeatureCollection => {
-  return ee.FeatureCollection(fc).map(fetchWildfireHistory);
-};
+const WildfireImageCollection = 'FIRMS';
 
-export const WildfireImageCollection = 'FIRMS';
+export class WildfireSource extends EarthEngineSource {
+  protected dateRange: [number, number] | undefined;
+  public label = () => {
+    return 'Wildfire';
+  };
+  protected evaluate = (fc: ee.FeatureCollection) => {
+    return ee.FeatureCollection(fc).map(fetchWildfireHistory);
+  };
+  protected fetchDateRange = async (): Promise<[number, number]> => {
+    if (this.dateRange) {
+      return this.dateRange;
+    }
+    this.dateRange = await fetchImageCollectionDateRange(
+      WildfireImageCollection
+    );
+    return this.dateRange;
+  };
+}
 
 const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
   const feature = ee.Feature(uc);
@@ -66,4 +84,15 @@ const fetchWildfireHistory = (uc: ee.Feature): ee.Feature => {
       )
     })
   );
+};
+
+export const WildfireFields: GraphQLFieldConfigMap<
+  IOccurrence,
+  IEarthEngineContext
+> = {
+  Wildfire: {
+    description: WildfireType.description,
+    resolve: getResolveFunction({ source: new WildfireSource() }),
+    type: WildfireType
+  }
 };

@@ -2,10 +2,11 @@ import ee from '@google/earthengine';
 import { GraphQLFieldConfigMap, GraphQLInt } from 'graphql';
 import GraphQLJSON from 'graphql-type-json';
 import {
-  getResolveFieldFunction,
+  getResolveFunction,
   IEarthEngineContext,
   IOccurrence
-} from './types';
+} from './resolve';
+import { EarthEngineSource } from './source';
 
 const cutsetGeometry = (): ee.Geometry => {
   return ee.Geometry.Rectangle({
@@ -17,18 +18,24 @@ const cutsetGeometry = (): ee.Geometry => {
 const LandcoverImage = 'ESA/GLOBCOVER_L4_200901_200912_V2_3';
 
 // TODO: Consider converting the landcover to a key value pair to be more inline with GraphQL style.
-export const resolveLandcover = (
-  fc: ee.FeatureCollection
-): ee.FeatureCollection => {
-  return ee
-    .Image(LandcoverImage)
-    .select('landcover')
-    .reduceRegions({
-      collection: ee.FeatureCollection(fc),
-      reducer: ee.call('Reducer.frequencyHistogram').setOutputs(['Landcover']),
-      scale: 30
-    });
-};
+
+class LandcoverSource extends EarthEngineSource {
+  public label = () => {
+    return 'Landcover';
+  };
+  protected evaluate = (fc: ee.FeatureCollection): ee.FeatureCollection => {
+    return ee
+      .Image(LandcoverImage)
+      .select('landcover')
+      .reduceRegions({
+        collection: ee.FeatureCollection(fc),
+        reducer: ee
+          .call('Reducer.frequencyHistogram')
+          .setOutputs(['Landcover']),
+        scale: 30
+      });
+  };
+}
 
 export const LandcoverFields: GraphQLFieldConfigMap<
   IOccurrence,
@@ -36,10 +43,9 @@ export const LandcoverFields: GraphQLFieldConfigMap<
 > = {
   Landcover: {
     description: `The landcover category generated from ${LandcoverImage}.`,
-    resolve: getResolveFieldFunction({
-      featureResolver: resolveLandcover,
+    resolve: getResolveFunction({
       fieldName: 'Landcover',
-      sourceLabel: 'Landcover'
+      source: new LandcoverSource()
     }),
     type: GraphQLJSON
   }
@@ -48,22 +54,26 @@ export const LandcoverFields: GraphQLFieldConfigMap<
 const DigitalElevationModelImage = `CGIAR/SRTM90_V4`;
 
 // TODO: Should mean reduce elevation rather than first. But the others need to be considered more carefully.
-export const resolveTerrain = (
-  fc: ee.FeatureCollection
-): ee.FeatureCollection => {
-  return ee.Terrain.products(
-    ee.Image(ee.String(DigitalElevationModelImage)).clip(cutsetGeometry())
-  )
-    .select(
-      ['aspect', 'elevation', 'hillshade', 'slope'],
-      [...Object.keys(ElevationFields)]
+// tslint:disable:max-classes-per-file
+class TerrainSource extends EarthEngineSource {
+  public label = () => {
+    return 'Terrain';
+  };
+  protected evaluate = (fc: ee.FeatureCollection): ee.FeatureCollection => {
+    return ee.Terrain.products(
+      ee.Image(ee.String(DigitalElevationModelImage)).clip(cutsetGeometry())
     )
-    .reduceRegions({
-      collection: ee.FeatureCollection(fc),
-      reducer: ee.call('Reducer.first'),
-      scale: 30
-    });
-};
+      .select(
+        ['aspect', 'elevation', 'hillshade', 'slope'],
+        [...Object.keys(ElevationFields)]
+      )
+      .reduceRegions({
+        collection: ee.FeatureCollection(fc),
+        reducer: ee.call('Reducer.first'),
+        scale: 30
+      });
+  };
+}
 
 export const ElevationFields: GraphQLFieldConfigMap<
   IOccurrence,
@@ -71,37 +81,33 @@ export const ElevationFields: GraphQLFieldConfigMap<
 > = {
   Aspect: {
     description: `Aspect in degrees calculated from ${DigitalElevationModelImage}.`,
-    resolve: getResolveFieldFunction({
-      featureResolver: resolveTerrain,
+    resolve: getResolveFunction({
       fieldName: 'Aspect',
-      sourceLabel: 'Terrain'
+      source: new TerrainSource()
     }),
     type: GraphQLInt
   },
   Elevation: {
     description: `Elevation in meters from ${DigitalElevationModelImage}.`,
-    resolve: getResolveFieldFunction({
-      featureResolver: resolveTerrain,
+    resolve: getResolveFunction({
       fieldName: 'Elevation',
-      sourceLabel: 'Terrain'
+      source: new TerrainSource()
     }),
     type: GraphQLInt
   },
   Hillshade: {
     description: `Simple hillshade from ${DigitalElevationModelImage}.`,
-    resolve: getResolveFieldFunction({
-      featureResolver: resolveTerrain,
+    resolve: getResolveFunction({
       fieldName: 'Hillshade',
-      sourceLabel: 'Terrain'
+      source: new TerrainSource()
     }),
     type: GraphQLInt
   },
   Slope: {
     description: `Slope in degrees from ${DigitalElevationModelImage}.`,
-    resolve: getResolveFieldFunction({
-      featureResolver: resolveTerrain,
+    resolve: getResolveFunction({
       fieldName: 'Slope',
-      sourceLabel: 'Terrain'
+      source: new TerrainSource()
     }),
     type: GraphQLInt
   }

@@ -1,6 +1,9 @@
+import ee from '@google/earthengine';
 import { GraphQLFloat, GraphQLInt, GraphQLString } from 'graphql';
 import { GraphQLDateTime } from 'graphql-iso-date';
 import * as iots from 'io-ts';
+// tslint:disable:no-submodule-imports
+import { ThrowReporter } from 'io-ts/lib/ThrowReporter';
 
 // Important that these are the same as the ILocationFields interface.
 export const LocationLabels = {
@@ -56,3 +59,45 @@ export const LocationFields = {
     type: GraphQLFloat
   }
 };
+
+export class LocationCollection {
+  public readonly minTime: number;
+  public readonly maxTime: number;
+  protected readonly locations: ILocationFields[];
+
+  constructor(locations: ILocationFields[]) {
+    this.locations = locations.sort((a, b) => {
+      return a.ID < b.ID ? -1 : 1;
+    });
+
+    this.validate();
+
+    this.minTime = locations.reduce(
+      (min, b) => Math.min(min, b.IntervalStartDate),
+      locations[0].IntervalStartDate
+    );
+
+    this.maxTime = locations.reduce(
+      (max, b) => Math.max(max, b.Date),
+      locations[0].Date
+    );
+  }
+
+  public featureCollection = () => {
+    return ee.FeatureCollection(
+      this.locations.map(loc => {
+        return ee.Feature(ee.Geometry.Point(loc.Longitude, loc.Latitude), loc);
+      })
+    );
+  };
+
+  protected validate = () => {
+    if (this.locations.length > 50) {
+      throw new Error(
+        'For now, only 50 locations are currently allowed per request'
+      );
+    }
+
+    this.locations.forEach(loc => ThrowReporter.report(Location.decode(loc)));
+  };
+}

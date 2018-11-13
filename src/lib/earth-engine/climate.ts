@@ -8,9 +8,10 @@ import {
   GraphQLObjectType
 } from 'graphql';
 import { LocationLabels } from '../occurrences/location';
-import { IEarthEngineContext, IOccurrence } from './types';
+import { IEarthEngineContext, IOccurrence } from './resolve';
+import { EarthEngineSource, fetchImageCollectionDateRange } from './source';
 
-export const ClimateImageCollectionName = 'NOAA/CFSV2/FOR6H';
+const ClimateImageCollectionName = 'NOAA/CFSV2/FOR6H';
 // Note that GeoPotentialHeight is defined as a top level field,
 // as it is more closely related to elevation.
 export const GeoPotentialHeightLabel = 'GeopotentialHeight';
@@ -166,9 +167,24 @@ export const ClimateIndexType: GraphQLObjectType = new GraphQLObjectType({
 
 // TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
 
-export const resolveClimateData = (fc: ee.FeatureCollection) => {
-  return ee.FeatureCollection(fc).map(resolveClimateFeature);
-};
+export class ClimateSource extends EarthEngineSource {
+  protected dateRange: [number, number] | undefined;
+  public label = () => {
+    return 'Climate';
+  };
+  protected evaluate = (fc: ee.FeatureCollection) => {
+    return ee.FeatureCollection(fc).map(resolveClimateFeature);
+  };
+  protected fetchDateRange = async (): Promise<[number, number]> => {
+    if (this.dateRange) {
+      return this.dateRange;
+    }
+    this.dateRange = await fetchImageCollectionDateRange(
+      ClimateImageCollectionName
+    );
+    return this.dateRange;
+  };
+}
 
 // This method does not work if the time range is too wide or
 // the region to reduce is too large. Individual reduce is safer, though slower.
@@ -203,7 +219,7 @@ export const resolveClimateData = (fc: ee.FeatureCollection) => {
 // });
 // };
 
-export function resolveClimateFeature(feature: ee.Feature): ee.Feature {
+function resolveClimateFeature(feature: ee.Feature): ee.Feature {
   // const latitudeDegreeAvgMeters = 111000;
   // ClimateImageCollectionName resolution is 0.2 arc degree.
   // latitudeDegreeAvgMeters * 0.2 = 22200

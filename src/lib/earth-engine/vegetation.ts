@@ -1,6 +1,7 @@
 import ee from '@google/earthengine';
 import { GraphQLFloat, GraphQLList, GraphQLObjectType } from 'graphql';
 import { LocationLabels } from '../occurrences/location';
+import { EarthEngineSource, fetchImageCollectionDateRange } from './source';
 
 // TODO: These satellites have a rich history, so would be better to learn more about them.
 // http://blogs.discovermagazine.com/imageo/2018/06/10/nearly-two-decades-revealing-satellite-images-now-available-fingertips/
@@ -41,21 +42,47 @@ export const VegetationIndexType: GraphQLObjectType = new GraphQLObjectType({
   name: 'VegetationIndices'
 });
 
-export const AquaVegetationImageCollectionName = 'MODIS/006/MYD13Q1';
-export const TerraVegetationImageCollectionName = 'MODIS/006/MOD13Q1';
+const AquaVegetationImageCollectionName = 'MODIS/006/MYD13Q1';
+const TerraVegetationImageCollectionName = 'MODIS/006/MOD13Q1';
 
-// TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
-export const resolveAquaVegetationIndices = (
-  fc: ee.FeatureCollection
-): ee.FeatureCollection => {
-  return fc.map(getFeatureFetchFunction(AquaVegetationImageCollectionName));
-};
+export class AquaVegetationSource extends EarthEngineSource {
+  protected dateRange: [number, number] | undefined;
+  public label = () => {
+    return 'AquaVegetation';
+  };
+  protected evaluate = (fc: ee.FeatureCollection) => {
+    return fc.map(getFeatureFetchFunction(AquaVegetationImageCollectionName));
+  };
+  protected fetchDateRange = async (): Promise<[number, number]> => {
+    if (this.dateRange) {
+      return this.dateRange;
+    }
+    this.dateRange = await fetchImageCollectionDateRange(
+      AquaVegetationImageCollectionName
+    );
+    return this.dateRange;
+  };
+}
 
-export const resolveTerraVegetationIndices = (
-  fc: ee.FeatureCollection
-): ee.FeatureCollection => {
-  return fc.map(getFeatureFetchFunction(TerraVegetationImageCollectionName));
-};
+// tslint:disable:max-classes-per-file
+export class TerraVegetationSource extends EarthEngineSource {
+  protected dateRange: [number, number] | undefined;
+  public label = () => {
+    return 'TerraVegetation';
+  };
+  protected evaluate = (fc: ee.FeatureCollection) => {
+    return fc.map(getFeatureFetchFunction(TerraVegetationImageCollectionName));
+  };
+  protected fetchDateRange = async (): Promise<[number, number]> => {
+    if (this.dateRange) {
+      return this.dateRange;
+    }
+    this.dateRange = await fetchImageCollectionDateRange(
+      TerraVegetationImageCollectionName
+    );
+    return this.dateRange;
+  };
+}
 
 const MODIS_BANDS = [
   'NDVI',
@@ -66,6 +93,7 @@ const MODIS_BANDS = [
   'sur_refl_b07'
 ];
 
+// TODO: Really should group by date and run concurrently because examples will fall on same day in daily search.
 function getFeatureFetchFunction(
   imageCollectionName: string
 ): (feat: ee.Feature) => ee.Feature {

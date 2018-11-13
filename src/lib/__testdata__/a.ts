@@ -5,8 +5,8 @@ export default {
   Hillshade: 162,
   GeopotentialHeight: 887.0079956054688,
   SurfaceWater: {
-    DistanceToNearest: 7224.175898617468,
-    CoverageByRadius: [0, 0, 0.00012272772760976125]
+    DistanceToNearest: 1914.9133365951377,
+    CoverageByRadius: [0, 0, 0.00004169553614860911]
   },
   TerraVegetation: {
     BlueSurfaceReflectance: [7672],

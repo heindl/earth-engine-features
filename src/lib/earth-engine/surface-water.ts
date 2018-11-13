@@ -6,10 +6,32 @@ import {
   GraphQLObjectType
 } from 'graphql';
 import { LocationLabels } from '../occurrences/location';
-import { IEarthEngineContext, IOccurrence } from './types';
+import { IEarthEngineContext, IOccurrence } from './resolve';
+import { EarthEngineSource } from './source';
 
 const NEAREST_LABEL = 'DistanceToNearest';
 const PERCENTAGE_LABEL = 'CoverageByRadius';
+
+export class SurfaceWaterSource extends EarthEngineSource {
+  public label = () => {
+    return 'SurfaceWater';
+  };
+  protected evaluate = (fc: ee.FeatureCollection) => {
+    const data = ee
+      .Dictionary(
+        ee.FeatureCollection(fc).iterate(compileBatches, ee.Dictionary({}))
+      )
+      .map(fetchBatch)
+      .values()
+      .iterate(
+        (ifc: ee.UncastFeatureCollection, resFc: ee.UncastFeatureCollection) => {
+          return ee.FeatureCollection(resFc).merge(ee.FeatureCollection(ifc));
+        },
+        ee.FeatureCollection([])
+      );
+    return ee.FeatureCollection(data);
+  };
+}
 
 export const SurfaceWaterTypeFields: GraphQLFieldConfigMap<
   IOccurrence,
@@ -177,21 +199,3 @@ const compileBatches = (
     ee.FeatureCollection(list).merge(ee.FeatureCollection(feature))
   );
 };
-
-export function resolveSurfaceWater(
-  fc: ee.FeatureCollection
-): ee.FeatureCollection {
-  const data = ee
-    .Dictionary(
-      ee.FeatureCollection(fc).iterate(compileBatches, ee.Dictionary({}))
-    )
-    .map(fetchBatch)
-    .values()
-    .iterate(
-      (ifc: ee.UncastFeatureCollection, resFc: ee.UncastFeatureCollection) => {
-        return ee.FeatureCollection(resFc).merge(ee.FeatureCollection(ifc));
-      },
-      ee.FeatureCollection([])
-    );
-  return ee.FeatureCollection(data);
-}
