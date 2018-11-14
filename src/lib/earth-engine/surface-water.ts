@@ -24,7 +24,10 @@ export class SurfaceWaterSource extends EarthEngineSource {
       .map(fetchBatch)
       .values()
       .iterate(
-        (ifc: ee.UncastFeatureCollection, resFc: ee.UncastFeatureCollection) => {
+        (
+          ifc: ee.UncastFeatureCollection,
+          resFc: ee.UncastFeatureCollection
+        ) => {
           return ee.FeatureCollection(resFc).merge(ee.FeatureCollection(ifc));
         },
         ee.FeatureCollection([])

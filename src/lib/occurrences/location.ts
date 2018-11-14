@@ -1,7 +1,8 @@
 import ee from '@google/earthengine';
 import { GraphQLFloat, GraphQLInt, GraphQLString } from 'graphql';
-import { GraphQLDateTime } from 'graphql-iso-date';
+import { GraphQLDate, GraphQLDateTime } from 'graphql-iso-date';
 import * as iots from 'io-ts';
+import {date as iotsDate} from 'io-ts-types';
 // tslint:disable:no-submodule-imports
 import { ThrowReporter } from 'io-ts/lib/ThrowReporter';
 
@@ -17,9 +18,9 @@ export const LocationLabels = {
 
 export const Location = iots.type({
   CoordinateUncertainty: iots.number,
-  Date: iots.number,
+  Date: iotsDate,
   ID: iots.string,
-  IntervalStartDate: iots.number,
+  IntervalStartDate: iotsDate,
   Latitude: iots.number,
   Longitude: iots.number
 });
@@ -40,7 +41,7 @@ export const LocationFields = {
   },
   Date: {
     description: `Datetime of the example.`,
-    type: GraphQLDateTime
+    type: GraphQLDate
   },
   ID: {
     description: `Either provided or automatically generated string id for the occurrence.`,
@@ -48,7 +49,7 @@ export const LocationFields = {
   },
   IntervalStartDate: {
     description: `Start of the of the aggregation interval.`,
-    type: GraphQLDateTime
+    type: GraphQLDate
   },
   Latitude: {
     description: `Latitude of example.`,

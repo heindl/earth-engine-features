@@ -1,4 +1,5 @@
 import ee from '@google/earthengine';
+import { initializeEarthEngine } from '../earth-engine/initialize';
 import { IRandomQueryArgs } from '../schema/query-args';
 import { LocationLabels } from './location';
 
@@ -76,6 +77,7 @@ const maxPointsPerClass = (numPoints: number, groups: ee.List): ee.List => {
 export const generateRandomFeatures = async (
   args: IRandomQueryArgs
 ): Promise<ee.List> => {
+  await initializeEarthEngine();
   // Lower count requests are not returning correctly, I suspect as a result of the way eco-regions are
   // stratified and in some cases null values are dropped. To correct, increase the total number and slice at the end.
   const numPoints = args.count + 10;

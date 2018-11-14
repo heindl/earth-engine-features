@@ -1,9 +1,9 @@
 import test from 'ava';
 import { TestLocationsCollection } from '../__testdata__/locations';
 import { IRequestResponse } from './resolve';
-import {SurfaceWaterSource} from './surface-water'
+import { SurfaceWaterSource } from './surface-water';
 
-test('earth engine source', async t => {
+test.skip('earth engine source', async t => {
   const src = new SurfaceWaterSource();
 
   src.initiate(TestLocationsCollection);
@@ -18,5 +18,4 @@ test('earth engine source', async t => {
   const field = 'DistanceToNearest';
 
   t.is(s[field], 468.93640896379054);
-
 });

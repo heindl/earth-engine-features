@@ -7,7 +7,8 @@ import { EarthEngineFields } from './fields';
 import {
   EarthEngineResolver,
   IEarthEngineContext,
-  IOccurrence, IRequestResponse
+  IOccurrence,
+  IRequestResponse
 } from './resolve';
 import { EarthEngineRequestService } from './service';
 
@@ -39,7 +40,11 @@ test.skip('test single earth engine resolver', async t => {
 
   const resolvers = resolverMapFromFields(EarthEngineFields);
 
-  const a = (await resolvers.Climate({ ID: 'a' }, {}, { ee: eeService })) as IRequestResponse
+  const a = (await resolvers.Climate(
+    { ID: 'a' },
+    {},
+    { ee: eeService }
+  )) as IRequestResponse;
 
   t.is(a.ID, 'a');
   t.truthy(a[GeoPotentialHeightLabel]);

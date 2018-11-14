@@ -8,7 +8,6 @@ import { ILocationFields, Location } from '../occurrences/location';
 import { OccurrenceQuerySchema } from './schema';
 
 test('random graphql query', async t => {
-
   const q = `
       query {
         random(count: 5){
@@ -43,8 +42,7 @@ test('random graphql query', async t => {
   t.is(res.data.random.length, 5);
 });
 
-test('schema integration with known points', async t => {
-
+test.skip('schema integration with known points', async t => {
   t.log(locationsGraphQLString());
 
   const q = `
